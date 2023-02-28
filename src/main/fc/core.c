@@ -1092,6 +1092,14 @@ void processRxModes(timeUs_t currentTimeUs)
         beeper(BEEPER_RC_SMOOTHING_INIT_FAIL);
     }
 #endif
+#ifdef USE_ALT_HOLD
+    if(!IS_RC_MODE_ACTIVE(BOXRANGEFINDER))
+    {
+        DISABLE_FLIGHT_MODE(RANGEFINDER_MODE);     
+    }else{
+        ENABLE_FLIGHT_MODE(RANGEFINDER_MODE);
+    }
+#endif
 
     pidSetAntiGravityState(IS_RC_MODE_ACTIVE(BOXANTIGRAVITY) || featureIsEnabled(FEATURE_ANTI_GRAVITY));
 }

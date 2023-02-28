@@ -31,6 +31,9 @@
 
 #if defined(USE_TELEMETRY_MAVLINK)
 
+#include "build/debug.h"
+#include "build/build_config.h"
+
 #include "common/maths.h"
 #include "common/axis.h"
 #include "common/color.h"
@@ -44,6 +47,7 @@
 #include "drivers/accgyro/accgyro.h"
 #include "drivers/sensor.h"
 #include "drivers/time.h"
+#include "drivers/light_led.h"
 
 #include "config/config.h"
 #include "fc/rc_controls.h"
@@ -82,7 +86,7 @@
 #include "common/mavlink.h"
 #pragma GCC diagnostic pop
 
-#define TELEMETRY_MAVLINK_INITIAL_PORT_MODE MODE_TX
+#define TELEMETRY_MAVLINK_INITIAL_PORT_MODE MODE_RXTX
 #define TELEMETRY_MAVLINK_MAXRATE 100
 #define TELEMETRY_MAVLINK_DELAY ((100 * 10) / TELEMETRY_MAVLINK_MAXRATE) //1000/100us=0.01ms
 
@@ -93,6 +97,88 @@ static const serialPortConfig_t *portConfig;
 
 static bool mavlinkTelemetryEnabled =  false;
 static portSharing_e mavlinkPortSharing;
+
+static void mavlinkReceive(uint16_t c, void* data) {
+
+    UNUSED(data);
+    mavlink_message_t msg;
+    mavlink_status_t status;
+    uint8_t mav_type;
+    uint8_t mav_autopilot;
+    uint8_t mav_basemode;
+    uint32_t mav_custommode;
+    uint8_t mav_systemstatus;
+    uint8_t mav_version;
+
+    static bool state1 = 0;
+    static bool state = 0;
+    // toggle led every 10 bytes
+//         static uint16_t cnt = 0;
+//         cnt ++ ;
+//         if (cnt % 10 == 0) {
+//             cnt = 0;
+//             static bool state = 0;
+//             ledSet(0, state);
+// //            ledSet(1, state);
+// //            ledSet(2, state);
+//             state = !state;
+//         }
+    
+
+    if (mavlink_parse_char(MAVLINK_COMM_0, (uint8_t)c, &msg, &status)) {
+
+        switch(msg.msgid) {
+            // receive heartbeat
+            case 0: {
+                mavlink_heartbeat_t command;
+                mavlink_msg_heartbeat_decode(&msg,&command);
+                mav_custommode = command.custom_mode;
+                mav_type = command.type;
+                mav_autopilot = command.autopilot;
+                mav_basemode = command.base_mode;
+                mav_systemstatus = command.custom_mode;
+                mav_version = command.mavlink_version;
+                // ledSet(0, state); 
+                // state = !state;
+                break;
+            }
+            // setpoint command
+            case 81: {
+                mavlink_manual_setpoint_t command;
+                mavlink_msg_manual_setpoint_decode(&msg,&command);
+                attitude_controller.altitude_thrust = -command.thrust * 100;
+                attitude_controller.roll = command.roll;   //maybe need normalization but this should be done in the JeVois
+                attitude_controller.pitch = -command.pitch;
+                attitude_controller.yaw = command.yaw;
+                // ledSet(1, state1); 
+                // state1 = !state1;
+
+                // DEBUG_SET(DEBUG_UART,1,command.time_boot_ms);	
+                // DEBUG_SET(DEBUG_UART,3,uart_altitude);
+                // DEBUG_SET(DEBUG_COMMAND,0,uart_altitude);
+                // DEBUG_SET(DEBUG_COMMAND,1,uart_roll / 3.14 * 180);
+                // DEBUG_SET(DEBUG_COMMAND,2,uart_pitch / 3.14 * 180);
+                // DEBUG_SET(DEBUG_COMMAND,3,uart_yaw / 3.14 * 180);
+                break;
+            }
+            case 102:{
+                mavlink_vision_position_estimate_t command;
+                mavlink_msg_vision_position_estimate_decode(&msg,&command);
+                ledSet(1, state1); 
+                state1 = !state1;
+                break;
+            }
+            case 240:{
+                ledSet(0, state); 
+                state = !state;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+}
+
 
 /* MAVLink datastream rates in Hz */
 // static const uint8_t mavRates[] = {
@@ -182,7 +268,7 @@ void configureMAVLinkTelemetryPort(void)
         baudRateIndex = BAUD_230400;
     }
 
-    mavlinkPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_MAVLINK, NULL, NULL, baudRates[baudRateIndex], TELEMETRY_MAVLINK_INITIAL_PORT_MODE, telemetryConfig()->telemetry_inverted ? SERIAL_INVERTED : SERIAL_NOT_INVERTED);
+    mavlinkPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_MAVLINK, mavlinkReceive, NULL, baudRates[baudRateIndex], TELEMETRY_MAVLINK_INITIAL_PORT_MODE, SERIAL_STOPBITS_1);
 
     if (!mavlinkPort) {
         return;
@@ -406,11 +492,11 @@ void mavlinkSendAttitude(void)
         // yaw Yaw angle (rad)
         DECIDEGREES_TO_RADIANS(attitude.values.yaw),
         // rollspeed Roll angular speed (rad/s)
-        0,
+        gyro.gyroADCf[0],
         // pitchspeed Pitch angular speed (rad/s)
-        0,
+        gyro.gyroADCf[1],
         // yawspeed Yaw angular speed (rad/s)
-        0);
+        gyro.gyroADCf[2]);
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
 }
@@ -627,6 +713,28 @@ void mavlinkSendHeartbeat(void)
     mavlinkSerialWrite(mavBuffer, msgLength);
 }
 
+void mavlinkSendManualSetpoint(void)
+{
+    uint16_t msgLength;
+    float roll = 0.2;
+    float pitch = 0;
+    float yaw = 0;
+    float thrust = 0.2;
+    uint8_t mode_switch = 0;
+    uint8_t manual_override_switch = 0;
+
+    mavlink_msg_manual_setpoint_pack(0, 200, &mavMsg,
+    micros(),
+    roll,
+    pitch,
+    yaw,
+    thrust,
+    mode_switch,
+    manual_override_switch);
+    msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
+    mavlinkSerialWrite(mavBuffer, msgLength);
+}
+
 void processMAVLinkTelemetry(void)
 {
     // is executed @ TELEMETRY_MAVLINK_MAXRATE rate
@@ -650,12 +758,15 @@ void processMAVLinkTelemetry(void)
     // #endif
 
     //   if (mavlinkStreamTrigger(MAV_DATA_STREAM_EXTRA1)) {
-    mavlinkSendAttitude();
+    //mavlinkSendAttitude();
     //   }
 
     //   if (mavlinkStreamTrigger(MAV_DATA_STREAM_EXTRA2)) {
-    mavlinkSendHUDAndHeartbeat();
+    //mavlinkSendHUDAndHeartbeat();
+
+    mavlinkSendManualSetpoint();
     //   }
+    serialPrint(mavlinkPort,"Tx success\r\n");
 }
 
 void handleMAVLinkTelemetry(void)
@@ -793,7 +904,7 @@ void WifiInitHardware_Esp8266(void)
 
 
 //        serialPrint(mavlinkPort,"AT+CIPSTART=\"UDP\",\"192.168.254.53\",14555\r\n");
-        serialPrint(mavlinkPort,"AT+CIPSTART=\"UDP\",\"192.168.31.142\",14555\r\n");
+        serialPrint(mavlinkPort,"AT+CIPSTART=\"UDP\",\"192.168.31.142\",14555,9000,0\r\n");
         delay(1000);
         nowtime = millis();
         c = serialRead(mavlinkPort);

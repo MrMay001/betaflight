@@ -13,6 +13,7 @@
 
 controller_t height_controller; 
 controller_t vel_controller; 
+attitude_ctrl_t attitude_controller;
 
 
 float throttle_init = 0.164;
@@ -62,10 +63,20 @@ void vel_controller_init(controller_t * controller)
     controller->input_error_range = vel_error_range;
 }
 
+void attitude_init(attitude_ctrl_t * controller)
+{
+    controller->roll = 0;
+    controller->pitch = 0;
+    controller->yaw = 0;
+
+    controller->altitude_thrust = 0;
+}
+
 void Controller_Init(void)
 {
     height_controller_init(&height_controller);
     vel_controller_init(&vel_controller);
+    attitude_init(&attitude_controller);
 }
 
 float pid_controller(float process_value, controller_t *controller) //增量式pid计算
