@@ -1,12 +1,15 @@
 /** @file
- *	@brief MAVLink comm protocol built from common.xml
- *	@see http://mavlink.org
+ *  @brief MAVLink comm protocol built from common.xml
+ *  @see http://mavlink.org
  */
+#pragma once
 #ifndef MAVLINK_H
 #define MAVLINK_H
 
+#define MAVLINK_PRIMARY_XML_HASH -4156475316939435206
+
 #ifndef MAVLINK_STX
-#define MAVLINK_STX 254
+#define MAVLINK_STX 253
 #endif
 
 #ifndef MAVLINK_ENDIAN
@@ -18,7 +21,11 @@
 #endif
 
 #ifndef MAVLINK_CRC_EXTRA
-#define MAVLINK_CRC_EXTRA 0
+#define MAVLINK_CRC_EXTRA 1
+#endif
+
+#ifndef MAVLINK_COMMAND_24BIT
+#define MAVLINK_COMMAND_24BIT 1
 #endif
 
 #include "version.h"

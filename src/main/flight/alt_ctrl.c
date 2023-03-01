@@ -5,16 +5,14 @@
 
 #include "common/maths.h"
 
-#include "alt_ctrl.h"
+#include "flight/alt_ctrl.h"
+#include "flight/position_ctrl.h"
 #include "sensors/rangefinder.h"
 
 #include "kalman_filter.h"
 
-
-controller_t height_controller; 
 controller_t vel_controller; 
-attitude_ctrl_t attitude_controller;
-
+controller_t height_controller; 
 
 float throttle_init = 0.164;
 float height_setpoint = 0.50;
@@ -61,15 +59,6 @@ void vel_controller_init(controller_t * controller)
     controller->output_max = 0.05;
 
     controller->input_error_range = vel_error_range;
-}
-
-void attitude_init(attitude_ctrl_t * controller)
-{
-    controller->roll = 0;
-    controller->pitch = 0;
-    controller->yaw = 0;
-
-    controller->altitude_thrust = 0;
 }
 
 void Controller_Init(void)
