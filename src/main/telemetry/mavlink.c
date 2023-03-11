@@ -91,6 +91,18 @@
 #define TELEMETRY_MAVLINK_MAXRATE 100
 #define TELEMETRY_MAVLINK_DELAY ((100 * 10) / TELEMETRY_MAVLINK_MAXRATE) //1000/100us=0.01ms
 
+#define WIFI_AT         "AT\r\n"
+#define WIFI_CWMODE     "AT+CWMODE=1\r\n"
+#define WIFI_RST        "AT+RST\r\n"
+//#define WIFI_CWJAP      "AT+CWJAP=\"Redmi_0C5C\",\"12345678\"\r\n"
+#define WIFI_CWJAP      "AT+CWJAP=\"NeSC\",\"nesc2022\"\r\n"
+#define WIFI_CIPMUX     "AT+CIPMUX=0\r\n"
+// #define WIFI_CIPSTART   "AT+CIPSTART=\"UDP\",\"192.168.31.142\",14555,9000,0\r\n"
+#define WIFI_CIPSTART   "AT+CIPSTART=\"UDP\",\"192.168.31.142\",14555,9000,0\r\n"
+#define WIFI_CIPMODE    "AT+CIPMODE=1\r\n"
+#define WIFI_CIPSEND    "AT+CIPSEND\r\n"
+
+
 extern uint16_t rssi; // FIXME dependency on mw.c
 
 static serialPort_t *mavlinkPort = NULL;
@@ -103,7 +115,7 @@ static portSharing_e mavlinkPortSharing;
 static const uint8_t mavRates[] = {
     [MAV_DATA_STREAM_EXTENDED_STATUS] = 2, //2Hz
     [MAV_DATA_STREAM_RC_CHANNELS] = 5, //5Hz
-    [MAV_DATA_STREAM_POSITION] = 10, //100Hz
+    [MAV_DATA_STREAM_POSITION] = 1, //100Hz
     [MAV_DATA_STREAM_EXTRA1] = 100, //10Hz
     [MAV_DATA_STREAM_EXTRA2] = 1, //100Hz
     [MAV_DATA_STREAM_EXTRA3] = 5
@@ -117,6 +129,8 @@ static uint8_t mavBuffer[MAVLINK_MAX_PACKET_LEN];
 //static uint32_t lastMavlinkMessage = 0;
 static uint32_t mavlinkstate_position = 0;
 //static uint8_t wifi_uart_baud = 1;
+
+static uint32_t hz = 0;
 
 //串口接收触发函数
 static void mavlinkReceive(uint16_t c, void* data) {
@@ -139,47 +153,49 @@ static void mavlinkReceive(uint16_t c, void* data) {
 
         switch(msg.msgid) {
             // receive heartbeat
-            case 0: {
-                mavlink_heartbeat_t command;
-                mavlink_msg_heartbeat_decode(&msg,&command);
-                mav_custommode = command.custom_mode;
-                mav_type = command.type;
-                mav_autopilot = command.autopilot;
-                mav_basemode = command.base_mode;
-                mav_systemstatus = command.custom_mode;
-                mav_version = command.mavlink_version;
-                ledSet(0, state); 
-                state = !state;
-                break;
-            }
+            // case 0: {
+            //     mavlink_heartbeat_t command;
+            //     mavlink_msg_heartbeat_decode(&msg,&command);
+            //     mav_custommode = command.custom_mode;
+            //     mav_type = command.type;
+            //     mav_autopilot = command.autopilot;
+            //     mav_basemode = command.base_mode;
+            //     mav_systemstatus = command.custom_mode;
+            //     mav_version = command.mavlink_version;
+            //     ledSet(0, state); 
+            //     state = !state;
+            //     break;
+            // }
             // setpoint command
-            case 81: {
-                mavlink_manual_setpoint_t command;
-                mavlink_msg_manual_setpoint_decode(&msg,&command);
-                attitude_controller.altitude_thrust = -command.thrust * 100;
-                attitude_controller.roll = command.roll;   //maybe need normalization but this should be done in the JeVois
-                attitude_controller.pitch = -command.pitch;
-                attitude_controller.yaw = command.yaw;
+            // case 81: {
+            //     mavlink_manual_setpoint_t command;
+            //     mavlink_msg_manual_setpoint_decode(&msg,&command);
+            //     attitude_controller.altitude_thrust = -command.thrust * 100;
+            //     attitude_controller.roll = command.roll;   //maybe need normalization but this should be done in the JeVois
+            //     attitude_controller.pitch = -command.pitch;
+            //     attitude_controller.yaw = command.yaw;
 
-                // DEBUG_SET(DEBUG_UART,1,command.time_boot_ms);	
-                // DEBUG_SET(DEBUG_UART,3,uart_altitude);
-                // DEBUG_SET(DEBUG_COMMAND,0,uart_altitude);
-                // DEBUG_SET(DEBUG_COMMAND,1,uart_roll / 3.14 * 180);
-                // DEBUG_SET(DEBUG_COMMAND,2,uart_pitch / 3.14 * 180);
-                // DEBUG_SET(DEBUG_COMMAND,3,uart_yaw / 3.14 * 180);
-                break;
-            }
+            //     // DEBUG_SET(DEBUG_UART,1,command.time_boot_ms);	
+            //     // DEBUG_SET(DEBUG_UART,3,uart_altitude);
+            //     // DEBUG_SET(DEBUG_COMMAND,0,uart_altitude);
+            //     // DEBUG_SET(DEBUG_COMMAND,1,uart_roll / 3.14 * 180);
+            //     // DEBUG_SET(DEBUG_COMMAND,2,uart_pitch / 3.14 * 180);
+            //     // DEBUG_SET(DEBUG_COMMAND,3,uart_yaw / 3.14 * 180);
+            //     break;
+            // }
             case 102:{
                 mavlink_vision_position_estimate_t command;
                 mavlink_msg_vision_position_estimate_decode(&msg,&command);
-                attitude_controller.dt = micros();
-                attitude_controller.r_x = command.x;
-                attitude_controller.r_y = command.y;
-                attitude_controller.r_z = command.z;
+                attitude_controller.dt = micros()*1e-6f;
+                attitude_controller.r_y = command.x;
+                attitude_controller.r_x = command.y;
+                attitude_controller.r_z = -command.z;
                 attitude_controller.r_Roll = command.roll;
                 attitude_controller.r_Pitch = command.pitch;
                 attitude_controller.r_Yaw = command.yaw;
                 attitude_controller.sum++;
+                kalman_filter1.Z_current->element[0] = -command.z;
+                kalman_filter1.optitrack_update = 1;
                 ledSet(1, state1); 
                 state1 = !state1;
                 break;
@@ -314,11 +330,11 @@ void mavlinkSendAttitude(void) //ID 30
         // yaw Yaw angle (rad)
         DECIDEGREES_TO_RADIANS(attitude.values.yaw),
         // rollspeed Roll angular speed (rad/s)
-        gyro.gyroADCf[0],
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_ROLL]),
         // pitchspeed Pitch angular speed (rad/s)
-        gyro.gyroADCf[1],
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_PITCH]),
         // yawspeed Yaw angular speed (rad/s)
-        gyro.gyroADCf[2]);
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_YAW]));
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
 }
@@ -337,133 +353,72 @@ void mavlinksendAltitude(void) //ID 141
     
     mavVel_Measure = Get_Acc_bias_kalman(); //速度测量值  (airspeed)
     mavVel_Hat_current = Get_Vel_Kalman(); //速度最优估计值 (groundspeed)
-    mavAltitude_Measure = rangefinderGetLatestAltitude(); //高度测量值 (altitude)
+    // mavAltitude_Measure = rangefinderGetLatestAltitude(); //高度测量值 (altitude)
+    mavAltitude_Measure = Get_z_measure();
     mavAltitude_Hat_current = Get_Alt_Kalman(); //高度最优估计值 (climb)
-    mavPID_vel_output = Get_Velocity_PID_Output(); //获取内环pid结果
     mavPID_height_output = Get_Height_PID_Output(); //获取外环pid结果
+    mavPID_vel_output = Get_Velocity_PID_Output(); //获取内环pid结果
     // mav_vel_throttle = Get_Velocity_throttle();
 
     mavlink_msg_altitude_pack(0, 200, &mavMsg,
     millis(),
-    mavVel_Measure,
-    mavVel_Hat_current,
-    mavAltitude_Measure,
-    mavAltitude_Hat_current,
-    mavPID_vel_output,
-    mavPID_height_output
+    attitude_send.ROLL,
+    attitude_send.PITCH,
+    attitude_send.YAW,
+    attitude_send.ROLL_rate,
+    attitude_send.PITCH_rate,
+    attitude_send.YAW_rate
+    // mavAltitude_Measure,  //高度测量值 (altitude)
+    // mavAltitude_Hat_current,  //高度最优估计值 (climb)
+    // mavVel_Measure,     //速度测量值  (airspeed)
+    // mavVel_Hat_current,    //速度最优估计值 (groundspeed)
+    // mavPID_height_output,
+    // mavPID_vel_output
+    // Get_vrpn_x(),
+    // Get_vrpn_y(),
+    // Get_vrpn_z(),
+    // attitude_controller.r_x,
+    // attitude_controller.r_y,
+    // attitude_controller.r_z,
+    // attitude_controller.r_Roll,
+    // attitude_controller.r_Pitch,
+    // attitude_controller.r_Yaw
     );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
 }
 
-void mavlinkSendHUDAndHeartbeat(void) //ID 74
+void mavlinkSendHUD(void) //ID 74
 {
-   uint16_t msgLength;
-    float mavAltitude = 0;
-    float mavGroundSpeed = 0;
+    uint16_t msgLength;
+    float mav_z_ierror = 0;
+    float mav_z_throttle = 0;
     float mavAirSpeed = 0;
     float mavClimbRate = 0;
 
-#if defined(USE_GPS)
-    // use ground speed if source available
-    if (sensors(SENSOR_GPS)) {
-        mavGroundSpeed = gpsSol.groundSpeed / 100.0f;
-    }
-#endif
 
-    mavAltitude = getEstimatedAltitudeCm() / 100.0;
+    mav_z_ierror = Get_Height_PID_Error();
+    mav_z_throttle = Get_Velocity_throttle();
+    mavClimbRate = attitude_controller.r_y;
 
     mavlink_msg_vfr_hud_pack(0, 200, &mavMsg,
         // airspeed Current airspeed in m/s
-        mavAirSpeed,
+        attitude_send.ROLL,
+        attitude_send.PITCH,
         // groundspeed Current ground speed in m/s
-        mavGroundSpeed,
+        //attitude_controller.r_Pitch,
         // heading Current heading in degrees, in compass units (0..360, 0=north)
         headingOrScaledMilliAmpereHoursDrawn(),
         // throttle Current throttle setting in integer percent, 0 to 100
         scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
         // alt Current altitude (MSL), in meters, if we have sonar or baro use them, otherwise use GPS (less accurate)
-        mavAltitude,
-        // climb Current climb rate in meters/second
-        mavClimbRate);
+        //attitude_controller.r_Yaw,
+        attitude_send.YAW,
+        attitude_controller.dtHz
+        );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
-
-
-    uint8_t mavModes = MAV_MODE_FLAG_MANUAL_INPUT_ENABLED;
-    if (ARMING_FLAG(ARMED))
-        mavModes |= MAV_MODE_FLAG_SAFETY_ARMED;
-
-    uint8_t mavSystemType;
-    switch (mixerConfig()->mixerMode)
-    {
-        case MIXER_TRI:
-            mavSystemType = MAV_TYPE_TRICOPTER;
-            break;
-        case MIXER_QUADP:
-        case MIXER_QUADX:
-        case MIXER_Y4:
-        case MIXER_VTAIL4:
-            mavSystemType = MAV_TYPE_QUADROTOR;
-            break;
-        case MIXER_Y6:
-        case MIXER_HEX6:
-        case MIXER_HEX6X:
-            mavSystemType = MAV_TYPE_HEXAROTOR;
-            break;
-        case MIXER_OCTOX8:
-        case MIXER_OCTOFLATP:
-        case MIXER_OCTOFLATX:
-            mavSystemType = MAV_TYPE_OCTOROTOR;
-            break;
-        case MIXER_FLYING_WING:
-        case MIXER_AIRPLANE:
-        case MIXER_CUSTOM_AIRPLANE:
-            mavSystemType = MAV_TYPE_FIXED_WING;
-            break;
-        case MIXER_HELI_120_CCPM:
-        case MIXER_HELI_90_DEG:
-            mavSystemType = MAV_TYPE_HELICOPTER;
-            break;
-        default:
-            mavSystemType = MAV_TYPE_GENERIC;
-            break;
-    }
-
-    // Custom mode for compatibility with APM OSDs
-    uint8_t mavCustomMode = 1;  // Acro by default
-
-    if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) {
-        mavCustomMode = 0;      //Stabilize
-        mavModes |= MAV_MODE_FLAG_STABILIZE_ENABLED;
-    }
-
-    uint8_t mavSystemState = 0;
-    if (ARMING_FLAG(ARMED)) {
-        if (failsafeIsActive()) {
-            mavSystemState = MAV_STATE_CRITICAL;
-        }
-        else {
-            mavSystemState = MAV_STATE_ACTIVE;
-        }
-    }
-    else {
-        mavSystemState = MAV_STATE_STANDBY;
-    }
-
-    mavlink_msg_heartbeat_pack(0, 200, &mavMsg,
-        // type Type of the MAV (quadrotor, helicopter, etc., up to 15 types, defined in MAV_TYPE ENUM)
-        mavSystemType,
-        // autopilot Autopilot type / class. defined in MAV_AUTOPILOT ENUM
-        MAV_AUTOPILOT_GENERIC,
-        // base_mode System mode bitfield, see MAV_MODE_FLAGS ENUM in mavlink/include/mavlink_types.h
-        mavModes,
-        // custom_mode A bitfield for use for autopilot-specific flags.
-        mavCustomMode,
-        // system_status System status flag, see MAV_STATE ENUM
-        mavSystemState);
-    msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
-    mavlinkSerialWrite(mavBuffer, msgLength);
+    attitude_controller.sum = 0;
 }
 
 void mavlinkSendHeartbeat(void)  //ID 0
@@ -559,8 +514,8 @@ void mavlinkLocalPositionNed(void) //ID 32
     float r_Yaw = Get_vrpn_Yaw();
     mavlink_msg_local_position_ned_pack(0, 200, &mavMsg,
     micros(),
-    r_x,
-    r_y,
+    Get_Alt_Kalman(),
+    Get_Height_PID_Output(),
     r_z,
     r_Roll,
     r_Pitch,
@@ -576,16 +531,17 @@ void processMAVLinkTelemetry(void)
     // if (mavlinkStreamTrigger(MAV_DATA_STREAM_EXTENDED_STATUS)) {
     //     mavlinkSendSystemStatus();
     // }
+    //if (mavlinkStreamTrigger(MAV_DATA_STREAM_POSITION)) {
+        // mavlinkLocalPositionNed();
+//    mavlinkSendHeartbeat();
+    // mavlinkSendHUD();
+    //}
+    mavlinkSendAttitude();
+    mavlinksendAltitude();
 
-    if (mavlinkStreamTrigger(MAV_DATA_STREAM_EXTRA1)) {
-        mavlinkSendAttitude();
-        mavlinksendAltitude();
-        mavlinkLocalPositionNed();
-    }
-
-    if (mavlinkStreamTrigger(MAV_DATA_STREAM_EXTRA2)) {
-        mavlinkSendHeartbeat();
-    }
+    // if (mavlinkStreamTrigger(MAV_DATA_STREAM_EXTRA2)) {
+    //     mavlinkSendHeartbeat();
+    // }
 
 }
 
@@ -608,7 +564,7 @@ void WifiInitHardware_Esp8266(void)
     uint8_t c;
     #ifdef USE_WIFI_ESP8266
         nowtime = millis();
-        serialPrint(mavlinkPort, "AT\r\n");
+        serialPrint(mavlinkPort, WIFI_AT);
         delay(10);
         nowtime = millis();
         c = serialRead(mavlinkPort);
@@ -621,7 +577,7 @@ void WifiInitHardware_Esp8266(void)
         };
         c = 0;
 
-        serialPrint(mavlinkPort, "AT+CWMODE=1\r\n");
+        serialPrint(mavlinkPort, WIFI_CWMODE);
         nowtime = millis();
         c = serialRead(mavlinkPort);
         while(c != 'O')
@@ -644,30 +600,9 @@ void WifiInitHardware_Esp8266(void)
 //                     break;               
 //                 }  
 //             };
-//             delay(1000);
-//             delay(1000);
-//             delay(1000);
-//             delay(1000);
-//             delay(1000);
-//             delay(1000);
-//             serialPrint(mavlinkPort, "AT\r\n");
-//             delay(1000);
-//             delay(1000);
-//             serialPrint(mavlinkPort, "AT\r\n");
-//             delay(1000);
-//             delay(1000);
-//             serialPrint(mavlinkPort, "AT\r\n");
-//             delay(1000);
-//             delay(1000);
-//             serialPrint(mavlinkPort, "AT\r\n");
-//             delay(1000);
-//             delay(1000);
-//             c = 0;
-//             wifi_uart_baud++;
-//             return;
 //         }
 
-        serialPrint(mavlinkPort, "AT+RST\r\n");
+        serialPrint(mavlinkPort, WIFI_RST);
         nowtime = millis();
         c = serialRead(mavlinkPort);
         while(c != 'O')
@@ -686,7 +621,7 @@ void WifiInitHardware_Esp8266(void)
         //serialPrint(mavlinkPort, "AT+CWJAP=\"FAST_0530\",\"13525755559\"\r\n");
         //serialPrint(mavlinkPort, "AT+CWJAP=\"mi12\",\"11111111\"\r\n");
         //serialPrint(mavlinkPort, "AT+CWJAP=\"NeSC\",\"nesc2022\"\r\n");
-        serialPrint(mavlinkPort, "AT+CWJAP=\"Redmi_0C5C\",\"12345678\"\r\n");
+        serialPrint(mavlinkPort, WIFI_CWJAP);
         nowtime = millis();
         c = serialRead(mavlinkPort);
         while(c != 'W')
@@ -705,8 +640,11 @@ void WifiInitHardware_Esp8266(void)
         delay(1000);
         delay(1000);
         delay(1000);
+        delay(1000);
+        delay(1000);
+        delay(1000);
 
-        serialPrint(mavlinkPort,"AT+CIPMUX=0\r\n");
+        serialPrint(mavlinkPort,WIFI_CIPMUX);
         nowtime = millis();
         c = serialRead(mavlinkPort);
         while(c != 'O')
@@ -719,9 +657,7 @@ void WifiInitHardware_Esp8266(void)
         delay(200);
         c = 0;
 
-
-//        serialPrint(mavlinkPort,"AT+CIPSTART=\"UDP\",\"192.168.254.53\",14555\r\n");
-        serialPrint(mavlinkPort,"AT+CIPSTART=\"UDP\",\"192.168.31.142\",14555,9000,0\r\n");
+        serialPrint(mavlinkPort,WIFI_CIPSTART);
         delay(1000);
         nowtime = millis();
         c = serialRead(mavlinkPort);
@@ -735,7 +671,7 @@ void WifiInitHardware_Esp8266(void)
         delay(1000);
         c = 0;
 
-        serialPrint(mavlinkPort,"AT+CIPMODE=1\r\n");
+        serialPrint(mavlinkPort,WIFI_CIPMODE);
         nowtime = millis();
         c = serialRead(mavlinkPort);
         while(c != 'O')
@@ -748,10 +684,9 @@ void WifiInitHardware_Esp8266(void)
         delay(200);
         c = 0;
 
-        serialPrint(mavlinkPort,"AT+CIPSEND\r\n");
+        serialPrint(mavlinkPort,WIFI_CIPSEND);
         delay(200);
 
- //       serialPrint(mavlinkPort,"Connect Success!\r\n");
         nowtime = millis();
 #endif
 }

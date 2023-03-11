@@ -45,6 +45,7 @@ typedef struct kalman_filter_s
 	struct easyMatrix* buffer8;
 
 	uint8_t alt_update;
+	uint8_t optitrack_update;
 	float trace;
 
 	float dt;

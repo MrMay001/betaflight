@@ -46,6 +46,8 @@
 #include "flight/gps_rescue.h"
 #include "flight/pid_init.h"
 #include "flight/wifi.h"
+#include "flight/alt_ctrl.h"
+#include "flight/position_ctrl.h"
 
 #include "io/beeper.h"
 
@@ -564,10 +566,10 @@ FAST_CODE void processRcCommand(void)
                 // Treat the stick input as centered to avoid any stick deflection base modifications (like acceleration limit)
                 rcDeflection[axis] = 0;
                 rcDeflectionAbs[axis] = 0;
-            } else
+            } else 
 #endif
             {
-                // scale rcCommandf to range [-1.0, 1.0]
+                // scale rcCommandf attitude_controllerto range [-1.0, 1.0]
                 float rcCommandf;
                 if (axis == FD_YAW) {
                     rcCommandf = rcCommand[axis] / rcCommandYawDivider;
@@ -579,9 +581,22 @@ FAST_CODE void processRcCommand(void)
                 const float rcCommandfAbs = fabsf(rcCommandf);
                 rcDeflectionAbs[axis] = rcCommandfAbs;
 
-                angleRate = applyRates(axis, rcCommandf, rcCommandfAbs);
+                if(axis == FD_ROLL)
+                {
+                    attitude_send.ROLL = rcDeflection[FD_ROLL];
+                }
+                else if(axis == FD_PITCH)
+                {
+                    attitude_send.PITCH = rcDeflection[FD_PITCH];
+                }
+                else if(axis == FD_YAW)
+                {
+                    attitude_send.YAW = rcDeflection[FD_YAW];
+                }
 
+                angleRate = applyRates(axis, rcCommandf, rcCommandfAbs);
             }
+
             rawSetpoint[axis] = constrainf(angleRate, -1.0f * currentControlRateProfile->rate_limit[axis], 1.0f * currentControlRateProfile->rate_limit[axis]);
             DEBUG_SET(DEBUG_ANGLERATE, axis, lrintf(angleRate));
         }
@@ -590,6 +605,23 @@ FAST_CODE void processRcCommand(void)
             scaleRawSetpointToFpvCamAngle();
         }
     }
+// #ifdef USE_POSITION_HOLD
+//     if(FLIGHT_MODE(POSITION_HOLD_MODE))
+//     {
+//         float angleRate;
+//         for(int axis = FD_ROLL; axis <= FD_YAW; axis++)
+//         {
+//             if(axis == FD_ROLL)
+//             {
+//                 angleRate = 40;
+//                 rawSetpoint[axis] = constrainf(angleRate, -1.0f * currentControlRateProfile->rate_limit[axis], 1.0f * currentControlRateProfile->rate_limit[axis]);
+//             }
+//         }
+
+//     }
+// #endif
+
+
 
 #ifdef USE_RC_SMOOTHING_FILTER
     processRcSmoothingFilter();
@@ -676,6 +708,30 @@ FAST_CODE_NOINLINE void updateRcCommands(void)
             rcCommand[YAW] = rcCommandBuff.Z;
         }
     }
+
+
+// #ifdef USE_POSITION_HOLD
+//     if(FLIGHT_MODE(POSITION_HOLD_MODE))
+//         {
+//             for (int axis = 0; axis < 3; axis++)
+//             {
+//                 if(axis == ROLL){
+//                     // rcCommand[ROLL] = attitude_y_controller.throttle;
+//                     rcCommand[ROLL] = 30;
+//                 }
+//                 else if (axis == PITCH)
+//                 {
+//                     //rcCommand[PITCH] = -attitude_x_controller.throttle;
+//                 }
+//                 else 
+//                 {
+//                     // rcCommand[YAW] = attitude_yaw_controller.throttle;
+//                 }
+            
+//             }
+                
+//         }
+// #endif 
 
     // if(!IS_RC_MODE_ACTIVE(BOXRANGEFINDER))  //rx
     // {

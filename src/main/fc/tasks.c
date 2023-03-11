@@ -60,6 +60,7 @@
 #include "flight/wifi.h"
 #include "flight/alt_ctrl.h"
 #include "flight/kalman_filter.h"
+#include "flight/position_ctrl.h"
 
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/beeper.h"
@@ -441,7 +442,7 @@ task_attribute_t task_attributes[TASK_COUNT] = {
 #endif
 
 #ifdef USE_RANGEFINDER
-    [TASK_RANGEFINDER] = DEFINE_TASK("RANGEFINDER", NULL, NULL, taskUpdateRangefinder, TASK_PERIOD_HZ(100), TASK_PRIORITY_LOW),
+    [TASK_RANGEFINDER] = DEFINE_TASK("RANGEFINDER", NULL, NULL, taskUpdateRangefinder, TASK_PERIOD_HZ(10), TASK_PRIORITY_LOW),
 #endif
 
 #ifdef USE_CRSF_V3
@@ -450,7 +451,11 @@ task_attribute_t task_attributes[TASK_COUNT] = {
 
 #ifdef USE_ALT_HOLD
     [TASK_KALMAN_FILTER] = DEFINE_TASK("TASK_KALMAN_FILTER", NULL, NULL, Update_Kalman_filter, TASK_PERIOD_HZ(500), TASK_PRIORITY_LOW),
-    [TASK_ALT_CTRL] = DEFINE_TASK("TASK_ALT_CTRL", NULL, NULL, Update_PID_Height, TASK_PERIOD_HZ(100), TASK_PRIORITY_LOW),
+    [TASK_ALT_CTRL] = DEFINE_TASK("TASK_ALT_CTRL", NULL, NULL, Update_PID_Height, TASK_PERIOD_HZ(200), TASK_PRIORITY_LOW),
+#endif
+
+#ifdef USE_POSITION_HOLD
+    [TASK_POSITION_CTRL] = DEFINE_TASK("TASK_POSITION_CTRL", NULL, NULL, Update_Position_xy, TASK_PERIOD_HZ(200), TASK_PRIORITY_LOW),
 #endif
 };
 
@@ -620,5 +625,10 @@ void tasksInit(void)
     setTaskEnabled(TASK_KALMAN_FILTER, true);
     setTaskEnabled(TASK_ALT_CTRL, true);
 #endif
+
+#ifdef USE_POSITION_HOLD
+    setTaskEnabled(TASK_POSITION_CTRL, true);
+#endif
+
 }
 

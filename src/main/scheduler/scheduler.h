@@ -183,6 +183,10 @@ typedef enum {
     TASK_ALT_CTRL,
 #endif
 
+#ifdef USE_POSITION_HOLD
+    TASK_POSITION_CTRL,
+#endif
+
     /* Count of real tasks */
     TASK_COUNT,
 

@@ -58,7 +58,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT] = {
     { .boxId = BOXCAMSTAB, .boxName = "CAMSTAB", .permanentId = 8 },
 //    { .boxId = BOXCAMTRIG, .boxName = "CAMTRIG", .permanentId = 9 },
 //    { .boxId = BOXGPSHOME, .boxName = "GPS HOME", .permanentId = 10 },
-//    { .boxId = BOXGPSHOLD, .boxName = "GPS HOLD", .permanentId = 11 },
+//    { .boxId = BOXPOSITION, .boxName = "POSITION HOLD", .permanentId = 11 },
     { .boxId = BOXPASSTHRU, .boxName = "PASSTHRU", .permanentId = 12 },
     { .boxId = BOXBEEPERON, .boxName = "BEEPER", .permanentId = 13 },
 //    { .boxId = BOXLEDMAX, .boxName = "LEDMAX", .permanentId = 14 }, (removed)
@@ -230,6 +230,14 @@ void initActiveBoxIds(void)
 #endif
         BME(BOXBEEPGPSCOUNT);
     }
+#endif
+
+#ifdef USE_POSITION_HOLD
+    BME(BOXCAMERA1);
+    // if(featureIsEnabled(FEATURE_POSITION_HOLD))
+    // {
+        // BME(BOXPOSITION); 
+ //   }
 #endif
 
 #ifdef USE_RANGEFINDER

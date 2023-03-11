@@ -1101,6 +1101,15 @@ void processRxModes(timeUs_t currentTimeUs)
     }
 #endif
 
+#ifdef USE_POSITION_HOLD
+    if(!IS_RC_MODE_ACTIVE(BOXCAMERA1))
+    {
+        DISABLE_FLIGHT_MODE(POSITION_HOLD_MODE);     
+    }else{
+        ENABLE_FLIGHT_MODE(POSITION_HOLD_MODE); 
+    }
+#endif
+
     pidSetAntiGravityState(IS_RC_MODE_ACTIVE(BOXANTIGRAVITY) || featureIsEnabled(FEATURE_ANTI_GRAVITY));
 }
 

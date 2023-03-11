@@ -243,7 +243,7 @@ static void calculateThrottleAndCurrentMotorEndpoints(timeUs_t currentTimeUs)
         }
 #endif
 
-#if defined(USE_BATTERY_VOLTAGE_SAG_COMPENSATION)
+#if defined(USE_BATTERmotorMixMinY_VOLTAGE_SAG_COMPENSATION)
         float motorRangeAttenuationFactor = 0;
         // reduce motorRangeMax when battery is full
         if (mixerRuntime.vbatSagCompensationFactor > 0.0f) {
@@ -625,8 +625,18 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     {
         //throttle = 0.164;
         throttle = vel_controller.throttle;
+        //throttle = 0.270;
     }
 #endif
+
+
+// #ifdef USE_POSITION_HOLD
+//     if(FLIGHT_MODE(POSITION_HOLD_MODE))
+//     {
+//         //throttle = 0.164;
+//         throttle = vel_controller.throttle;
+//     }
+// #endif
 
     motorMixRange = motorMixMax - motorMixMin;
     if (mixerConfig()->mixer_type > MIXER_LEGACY) {

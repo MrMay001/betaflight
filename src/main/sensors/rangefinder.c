@@ -322,10 +322,10 @@ bool rangefinderProcess(float cosTiltAngle)
     if (cosTiltAngle < rangefinder.maxTiltCos || rangefinder.rawAltitude < 0) {
         rangefinder.calculatedAltitude = RANGEFINDER_OUT_OF_RANGE;
         rangefinder.calculatedAltitude = 0.0f;
-        kalman_filter1.Z_current->element[0] = rangefinder.calculatedAltitude/100.0f;
+        //kalman_filter1.Z_current->element[0] = rangefinder.calculatedAltitude/100.0f;
     } else {
         rangefinder.calculatedAltitude = rangefinder.rawAltitude * cosTiltAngle;
-        kalman_filter1.Z_current->element[0] = rangefinder.calculatedAltitude/100.0f;
+        //kalman_filter1.Z_current->element[0] = rangefinder.calculatedAltitude/100.0f;
     }
     kalman_filter1.alt_update = 1;
 

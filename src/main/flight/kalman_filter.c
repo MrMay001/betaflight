@@ -174,9 +174,7 @@ void Kalman_update(kalman_filter_t *kalman)
 //     multiMatrix(kalman->A,kalman->P_last,kalman->buffer1);
 //     transMatrix(kalman->A,kalman->buffer2);
 //     multiMatrix(kalman->buffer1,kalman->buffer2,kalman->buffer3);
-//     addMatrix(kalman->buffer3,kalman->Q,kalman->P_PRE);
-
-//     lastTimeUs = currentTimeUs;
+//     addMatrix(kalman->buffer3,kalman_filter.h;
 
 // }
 
@@ -215,13 +213,23 @@ void Update_Kalman_filter(timeUs_t currentTimeUs)
 {
     Kalman_Predicted(&kalman_filter1, currentTimeUs);
     
-    if(kalman_filter1.alt_update == 1){
+    // if(kalman_filter1.alt_update == 1){
+    //     Kalman_update(&kalman_filter1);
+    //     kalman_filter1.alt_update = 0;
+    // }
+    // else{
+    //     Kalman_update_unalt(&kalman_filter1);
+    // }
+
+    if(kalman_filter1.optitrack_update == 1)
+    {
         Kalman_update(&kalman_filter1);
-        kalman_filter1.alt_update = 0;
+        kalman_filter1.optitrack_update = 0;
     }
     else{
         Kalman_update_unalt(&kalman_filter1);
     }
+
 
     calculate_Estimatedvel_acc(&kalman_filter1);
     // kalman_filter1.trace = TraceMatrix(kalman_filter1.Kp);

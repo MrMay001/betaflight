@@ -251,7 +251,7 @@ static const char * const mixerNames[] = {
 // sync this with features_e
 static const char * const featureNames[] = {
     "RX_PPM", "", "INFLIGHT_ACC_CAL", "RX_SERIAL", "MOTOR_STOP",
-    "SERVO_TILT", "SOFTSERIAL", "GPS", "",
+    "SERVO_TILT", "SOFTSERIAL", "GPS", "","POSITION",
     "RANGEFINDER", "TELEMETRY", "", "3D", "RX_PARALLEL_PWM",
     "RX_MSP", "RSSI_ADC", "LED_STRIP", "DISPLAY", "OSD",
     "", "CHANNEL_FORWARDING", "TRANSPONDER", "AIRMODE",
@@ -3308,6 +3308,13 @@ static void cliFeature(const char *cmdName, char *cmdline)
                     break;
                 }
 #endif
+// #ifdef USE_POSITION_HOLD
+//                 if(feature & FEATURE_POSITION_HOLD)
+//                 {
+//                     cliPrintLine("unavailable");
+//                     break;
+//                 }
+// #endif
 #ifndef USE_RANGEFINDER
                 if (feature & FEATURE_RANGEFINDER) {
                     cliPrintLine("unavailable");
