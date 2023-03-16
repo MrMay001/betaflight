@@ -47,3 +47,8 @@ bool getShouldUpdateFeedforward();
 void updateRcRefreshRate(timeUs_t currentTimeUs);
 uint16_t getCurrentRxRefreshRate(void);
 bool getRxRateValid(void);
+
+#ifdef USE_POSITION_HOLD
+float getOptiTrackDeflection(int axis);
+float getOptiTrackDeflectionAbs(int axis);
+#endif

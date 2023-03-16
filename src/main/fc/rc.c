@@ -70,6 +70,9 @@ float rcCommandDelta[XYZ_AXIS_COUNT];
 #endif
 static float rawSetpoint[XYZ_AXIS_COUNT];
 static float setpointRate[3], rcDeflection[3], rcDeflectionAbs[3];
+#ifdef USE_POSITION_HOLD
+static float OptiTrack[3], OptiTrackAbs[3];
+#endif
 static bool reverseMotors = false;
 static applyRatesFn *applyRates;
 static uint16_t currentRxRefreshRate;
@@ -136,6 +139,19 @@ float getRcDeflectionAbs(int axis)
 {
     return rcDeflectionAbs[axis];
 }
+
+#ifdef USE_POSITION_HOLD
+float getOptiTrackDeflection(int axis)
+{
+    return OptiTrack[axis];
+}
+
+float getOptiTrackDeflectionAbs(int axis)
+{
+    return OptiTrackAbs[axis];
+}
+
+#endif
 
 #ifdef USE_FEEDFORWARD
 float getRawSetpoint(int axis)
@@ -592,12 +608,15 @@ FAST_CODE void processRcCommand(void)
                 else if(axis == FD_YAW)
                 {
                     attitude_send.YAW = rcDeflection[FD_YAW];
+                    // rcDeflection[axis] = 0;
+                    // rcDeflectionAbs[axis] = 0;
                 }
+
 
                 angleRate = applyRates(axis, rcCommandf, rcCommandfAbs);
             }
 
-            rawSetpoint[axis] = constrainf(angleRate, -1.0f * currentControlRateProfile->rate_limit[axis], 1.0f * currentControlRateProfile->rate_limit[axis]);
+            rawSetpoint[axis] = constrainf(angleRate, -1.0f * currentControlRateProfile->rate_limit[axis], 1.0f * currentControlRateProfile->rate_limit[axis]);  //-1998  -  +1998
             DEBUG_SET(DEBUG_ANGLERATE, axis, lrintf(angleRate));
         }
         // adjust raw setpoint steps to camera angle (mixing Roll and Yaw)

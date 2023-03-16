@@ -81,7 +81,7 @@ static inline uint16_t mavlink_msg_altitude_pack(uint8_t system_id, uint8_t comp
     _mav_put_float(buf, 24, altitude_terrain);
     _mav_put_float(buf, 28, bottom_clearance);
 
-        memcpy(_MAV_PAYLOAD_NON_CONST(msg), buf, MAVLINK_MSG_ID_ALTITUDE_LEN);
+        memcpy(_MAV_PAYLOAD_NON_CONST(msg), buf,altitude_monotonicMAVLINK_MSG_ID_ALTITUDE_LEN);
 #else
     mavlink_altitude_t packet;
     packet.time_usec = time_usec;

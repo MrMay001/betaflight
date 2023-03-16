@@ -27,3 +27,7 @@ void checkMAVLinkTelemetryState(void);
 void freeMAVLinkTelemetryPort(void);
 void configureMAVLinkTelemetryPort(void);
 void WifiInitHardware_Esp8266(void);
+void mavlinkSendHeartbeat(void);
+void mavlinksendAltitude(void);
+void mavlinkSendHUD(void);
+void mavlinkSendAttitude(void);

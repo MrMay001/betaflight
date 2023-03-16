@@ -21,6 +21,8 @@ typedef struct attitude_ctrl
     float altitude_thrust;  //0-1
 
     uint16_t sum;
+    uint16_t sum1;
+    uint16_t sum2;
 
     float dt;
     float dtHz;
@@ -35,6 +37,8 @@ typedef struct attitude_send
     float ROLL_rate;
     float PITCH_rate;
     float YAW_rate;
+
+    float test_yaw;
 }attitude_send_t;
 
 extern attitude_send_t attitude_send;
