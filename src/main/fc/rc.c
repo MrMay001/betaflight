@@ -608,8 +608,11 @@ FAST_CODE void processRcCommand(void)
                 else if(axis == FD_YAW)
                 {
                     attitude_send.YAW = rcDeflection[FD_YAW];
-                    // rcDeflection[axis] = 0;
-                    // rcDeflectionAbs[axis] = 0;
+
+                    OptiTrack[axis] = 0;
+                    OptiTrackAbs[axis] = 0;
+                    rcDeflection[axis] = 0;
+                    rcDeflectionAbs[axis] = 0;
                 }
 
 

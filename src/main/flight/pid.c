@@ -413,11 +413,21 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
 #ifdef USE_POSITION_HOLD
     if(FLIGHT_MODE(POSITION_HOLD_MODE))
     {
-        angle = OptiTrackCtrlAngle(axis);
+        if(axis == FD_YAW)
+        {
+            angle = levelAngleLimit * OptiTrackCtrlAngle(axis);
+        }
     }
 #endif
     angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);
-    const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
+
+    // const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
+    float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
+    if(axis == FD_YAW)
+    {
+        angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);  //limit Yaw deg
+        errorAngle = angle - attitude_controller.r_Yaw;  //OptiTrack Yaw data
+    }
     // add new yaw pid
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE))
     {
@@ -1004,13 +1014,17 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
             DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
         }
         // //new add yaw pid
-        // else if(axis == FD_YAW) //此时也限制了YAW的角度范围
-        // {
-        //     currentPidSetpoint = Get_vrpn_Yaw();
-        //     currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
-        //     attitude_send.test_yaw = currentPidSetpoint;
-        //     DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
-        // }
+#endif
+
+#ifdef USE_POSITION_HOLD
+    if(FLIGHT_MODE(POSITION_HOLD_MODE))
+    {
+        if(axis == FD_YAW) //此时也限制了YAW的角度范围
+        {
+            currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
+            DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
+        }
+    }
 #endif
 
 #ifdef USE_ACRO_TRAINER

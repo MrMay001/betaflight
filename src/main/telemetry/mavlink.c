@@ -130,8 +130,6 @@ static uint8_t mavBuffer[MAVLINK_MAX_PACKET_LEN];
 static uint32_t mavlinkstate_position = 0;
 //static uint8_t wifi_uart_baud = 1;
 
-static float testdatalast = 0.0f;
-static float testdatanow = 0.0f;
 static bool state1 = 0;
 static bool state = 0;
 static bool state2 = 0;
@@ -205,7 +203,7 @@ static void mavlinkReceive(uint16_t c, void* data) {
                 attitude_controller.r_Roll = command.roll;
                 attitude_controller.r_Pitch = command.pitch;
                 attitude_controller.r_Yaw = command.yaw;
-                attitude_controller.sum++;
+                // attitude_controller.sum++;
                 kalman_filter1.Z_current->element[0] = -command.z;
                 kalman_filter1.optitrack_update = 1;
                 // if(state1 == 1)
@@ -346,25 +344,25 @@ void mavlinkSendAttitude(void) //ID 30
         // time_boot_ms Timestamp (milliseconds since system boot)
         millis(),
         // roll Roll angle (rad)
-        // DECIDEGREES_TO_RADIANS(attitude.values.roll),
+        DECIDEGREES_TO_RADIANS(attitude.values.roll),
         // // pitch Pitch angle (rad)
-        // DECIDEGREES_TO_RADIANS(-attitude.values.pitch),
+        DECIDEGREES_TO_RADIANS(-attitude.values.pitch),
         // // yaw Yaw angle (rad)
-        // DECIDEGREES_TO_RADIANS(attitude.values.yaw),
+        DECIDEGREES_TO_RADIANS(attitude.values.yaw),
         // // rollspeed Roll angular speed (rad/s)
-        // DEGREES_TO_RADIANS(gyro.gyroADCf[FD_ROLL]),
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_ROLL]),
         // // pitchspeed Pitch angular speed (rad/s)
-        // DEGREES_TO_RADIANS(gyro.gyroADCf[FD_PITCH]),
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_PITCH]),
         // // yawspeed Yaw angular speed (rad/s)
-        // DEGREES_TO_RADIANS(gyro.gyroADCf[FD_YAW])
-        attitude_controller.r_x,  //monotonic
-        attitude_controller.r_y,  //amsl
-        attitude_controller.r_z, //loacl
-        // attitude_controller.r_Roll,
-        attitude_controller.r_Roll,  //relative
-        // attitude_controller.r_Yaw 
-        attitude_controller.r_Pitch,  //terrain
-        attitude_controller.r_Yaw  //clearance
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_YAW])
+        // attitude_controller.r_x,  //monotonic
+        // attitude_controller.r_y,  //amsl
+        // attitude_controller.r_z, //loacl
+        // // attitude_controller.r_Roll,
+        // attitude_controller.r_Roll,  //relative
+        // // attitude_controller.r_Yaw 
+        // attitude_controller.r_Pitch,  //terrain
+        // attitude_controller.r_Yaw  //clearance
         );
         
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
@@ -394,20 +392,20 @@ void mavlinksendAltitude(void) //ID 141
 
     mavlink_msg_altitude_pack(0, 200, &mavMsg,
     millis(),
-    // attitude_send.ROLL/180*3.1415926,
-    // attitude_send.PITCH/180*3.1415926,
-    // attitude_send.YAW/180*3.1415926,
-    // attitude_send.ROLL_rate,
-    // -attitude_send.PITCH_rate,
-    // -attitude_send.YAW_rate
-    attitude_controller.r_x,  //monotonic
-    attitude_controller.r_y,  //amsl
-    attitude_controller.r_z, //loacl
-    // attitude_controller.r_Roll,
-    attitude_controller.r_Roll,  //relative
-    // attitude_controller.r_Yaw 
-    attitude_controller.r_Pitch,  //terrain
-    attitude_controller.r_Yaw  //clearance
+    attitude_send.ROLL/180*3.1415926,
+    attitude_send.PITCH/180*3.1415926,
+    attitude_send.YAW/180*3.1415926,
+    attitude_send.ROLL_rate,
+    -attitude_send.PITCH_rate,
+    -attitude_send.YAW_rate
+    // attitude_controller.r_x,  //monotonic
+    // attitude_controller.r_y,  //amsl
+    // attitude_controller.r_z, //loacl
+    // // attitude_controller.r_Roll,
+    // attitude_controller.r_Roll,  //relative
+    // // attitude_controller.r_Yaw 
+    // attitude_controller.r_Pitch,  //terrain
+    // attitude_controller.r_Yaw  //clearance
     );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
@@ -426,12 +424,12 @@ void mavlinkSendHUD(void) //ID 74
     // mav_z_ierror = Get_Height_PID_Error();
     // mav_z_throttle = Get_Velocity_throttle();
     // mavClimbRate = attitude_controller.r_y;
-    mav_Yaw = Get_vrpn_Yaw();
+    // mav_Yaw = Get_vrpn_Yaw();
 
     mavlink_msg_vfr_hud_pack(0, 200, &mavMsg,
         // airspeed Current airspeed in m/s
-        mav_Yaw,
-        attitude_send.test_yaw,
+        Get_Height_PID_Output(),
+        kalman_filter1.X_Hat_current->element[1],
         // groundspeed Current ground speed in m/s
         //attitude_controller.r_Pitch,
         // heading Current heading in degrees, in compass units (0..360, 0=north)
@@ -440,8 +438,8 @@ void mavlinkSendHUD(void) //ID 74
         scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
         // alt Current altitude (MSL), in meters, if we have sonar or baro use them, otherwise use GPS (less accurate)
         //attitude_controller.r_Yaw,
-        attitude_controller.sum,
-        attitude_controller.sum1
+        Get_Alt_Kalman(),
+        Get_Velocity_PID_Output()
         );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
@@ -536,17 +534,17 @@ void mavlinkLocalPositionNed(void) //ID 32
     float r_y = Get_vrpn_y();
     float r_z = Get_vrpn_z();
 
-    float r_Roll = Get_vrpn_Roll();
-    float r_Pitch = Get_vrpn_Pitch();
-    float r_Yaw = Get_vrpn_Yaw();
+    // float r_Roll = Get_vrpn_Roll();
+    // float r_Pitch = Get_vrpn_Pitch();
+    // float r_Yaw = Get_vrpn_Yaw();
     mavlink_msg_local_position_ned_pack(0, 200, &mavMsg,
     micros(),
     Get_Alt_Kalman(),
-    Get_Height_PID_Output(),
-    r_z,
-    r_Roll,
-    r_Pitch,
-    r_Yaw
+    Get_Vel_Kalman(),
+    Get_Acc_bias_kalman(),
+    0,
+    0,
+    0
     );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
@@ -568,7 +566,7 @@ void processMAVLinkTelemetry(void)
     //     serialPrint(mavlinkPort, "B");
     //     state = 0;
     // }
-//    }
+    //    }
     //     attitude_controller.sum1++;
 
     // }
@@ -590,7 +588,10 @@ void processMAVLinkTelemetry(void)
    
     // mavlinkSendHUD();
     }
+    mavlinkSendAttitude();
     mavlinksendAltitude();
+    mavlinkSendHUD();
+    // mavlinkLocalPositionNed();
     // serialWrite(mavlinkPort,"success");
     // serialWrite(mavlinkPort,62);
     // serialPrint(mavlinkPort,"abcd");
@@ -599,9 +600,7 @@ void processMAVLinkTelemetry(void)
 
     // if (mavlinkStreamTrigger(MAV_DATA_STREAM_EXTRA1)) {
     // mavlinkSendHeartbeat();
-    // mavlinkSendHUD();
-    
-    mavlinkSendAttitude();
+
     // }
 
 }
@@ -632,7 +631,7 @@ void WifiInitHardware_Esp8266(void)
         while(c != 'O')
         {
             if(millis()-nowtime > 200){
-                serialPrint(mavlinkPort, "wait1\r\n");
+                //serialPrint(mavlinkPort, "wait1\r\n");
                 break;
             }
         };
@@ -641,12 +640,11 @@ void WifiInitHardware_Esp8266(void)
         serialPrint(mavlinkPort, WIFI_CWMODE);
         nowtime = millis();
         delay(1000);
-        delay(1000);
         c = serialRead(mavlinkPort);
         while(c != 'O')
         { 
             if(millis()-nowtime > 500){
-                serialPrint(mavlinkPort, "wait2\r\n");     
+                //serialPrint(mavlinkPort, "wait2\r\n");     
                 break;               
             }  
         };
@@ -671,11 +669,10 @@ void WifiInitHardware_Esp8266(void)
         while(c != 'O')
         {
             if(millis()-nowtime > 200){
-                serialPrint(mavlinkPort, "wait3\r\n");
+                //serialPrint(mavlinkPort, "wait3\r\n");
                 break;
             }
         };
-        delay(1000);
         delay(1000);
         delay(1000);
         delay(1000);
@@ -693,20 +690,9 @@ void WifiInitHardware_Esp8266(void)
         delay(1000);
         delay(1000);
         delay(1000);
-        c = serialRead(mavlinkPort);
-        while(c != 'W')
-        {
-            if(millis()-nowtime > 1000){
-                serialPrint(mavlinkPort, "wait4\r\n");
-                break;
-            }      
-        };
-        c = 0;
         delay(1000);
-        // serialPrint(mavlinkPort, "wait4\r\n");
-        // delay(1000);
-        // delay(1000);
-        // delay(1000);
+        delay(1000);
+        delay(1000);
 
         serialPrint(mavlinkPort,WIFI_CIPMUX);
         nowtime = millis();
@@ -714,7 +700,7 @@ void WifiInitHardware_Esp8266(void)
         while(c != 'O')
         {
             if(millis()-nowtime > 2000){
-                serialPrint(mavlinkPort, "wait5\r\n");
+                //serialPrint(mavlinkPort, "wait5\r\n");
                 break;
             }
         };
@@ -730,7 +716,7 @@ void WifiInitHardware_Esp8266(void)
         while(c != 'O')
         {
             if(millis()-nowtime > 1000){
-                serialPrint(mavlinkPort, "wait6\r\n");
+                //serialPrint(mavlinkPort, "wait6\r\n");
                 break;
             }
         };

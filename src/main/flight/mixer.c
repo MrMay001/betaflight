@@ -54,7 +54,9 @@
 #include "flight/mixer_tricopter.h"
 #include "flight/pid.h"
 #include "flight/rpm_filter.h"
+#include "flight/position_ctrl.h"
 #include "flight/alt_ctrl.h"
+
 
 #include "pg/rx.h"
 
@@ -623,20 +625,9 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
 #ifdef USE_ALT_HOLD
     if(FLIGHT_MODE(RANGEFINDER_MODE))
     {
-        //throttle = 0.164;
-        throttle = vel_controller.throttle;
-        //throttle = 0.270;
+        throttle = Get_Velocity_throttle();
     }
 #endif
-
-
-// #ifdef USE_POSITION_HOLD
-//     if(FLIGHT_MODE(POSITION_HOLD_MODE))
-//     {
-//         //throttle = 0.164;
-//         throttle = vel_controller.throttle;
-//     }
-// #endif
 
     motorMixRange = motorMixMax - motorMixMin;
     if (mixerConfig()->mixer_type > MIXER_LEGACY) {

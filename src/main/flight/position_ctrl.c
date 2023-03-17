@@ -12,6 +12,8 @@
 attitude_ctrl_t attitude_controller;
 attitude_send_t attitude_send;
 
+float z_throttle = 0.23;
+
 void attitude_init(attitude_ctrl_t * controller)
 {
     controller->r_x = 0;
@@ -77,11 +79,11 @@ void z_controller_init(controller_t * controller)
     controller->pid.Error2 = 0.0;
     controller->pid.iError = 0.0;
 
-    controller->setpoint = 1;
+    controller->setpoint = 0.6;
     controller->throttle = 0;
                                                                  
-    controller->output_min = -0.05;
-    controller->output_max = 0.05;
+    controller->output_min = -0.1;
+    controller->output_max = 0.15;
 
     controller->input_error_range = 0;
 }
@@ -122,10 +124,10 @@ void Attitude_Send_Init(attitude_send_t * attitude_send)
 
 void Position_init(void)
 {
-    x_controller_init(&attitude_x_controller);
-    y_controller_init(&attitude_y_controller);
+    // x_controller_init(&attitude_x_controller);
+    // y_controller_init(&attitude_y_controller);
     z_controller_init(&attitude_z_controller);
-    yaw_controller_init(&attitude_yaw_controller);
+    // yaw_controller_init(&attitude_yaw_controller);
     Attitude_Send_Init(&attitude_send);
 }
 
@@ -161,19 +163,25 @@ void Position_y_ctrl(attitude_ctrl_t * controller)
 }
 void Position_z_ctrl(attitude_ctrl_t * controller)
 {
-    float output_z =  pid_controller(controller->r_z, &attitude_y_controller, 100);
+    float output_z =  pid_controller(controller->r_z, &attitude_z_controller, 1);
 
     //如果当前速度误差为正，则增加推力
-    if(output_z > 1 || output_z < -1)
+    if(output_z > 0.003 || output_z < -0.003)
     {
-        attitude_z_controller.throttle = output_z;
+        attitude_z_controller.throttle = output_z + z_throttle;
     }
     // 如果当前速度误差为负，则减小推力
     else{
-        attitude_z_controller.throttle = 0;
+        attitude_z_controller.throttle = z_throttle;
     }
     
 }
+
+// void Position_z_ctrl_vel(attitude_ctrl_t * controller)
+// {
+//     float output = pid_controller(controller->X_Hat_current->element[1], &vel_controller, 0.5);
+    
+// }
 
 void Position_yaw_ctrl(attitude_ctrl_t * controller)
 {
@@ -193,17 +201,12 @@ void Position_yaw_ctrl(attitude_ctrl_t * controller)
 
 void Update_Position_xy(timeUs_t currentTimeUs)
 {
-    // UNUSED(currentTimeUs);
-
-    static timeUs_t lastTimeUs = 0;
-    const float dTime = (currentTimeUs - lastTimeUs)*1e-6f;
+    UNUSED(currentTimeUs);
     // attitude_controller.dtHz = dTime;
-    Position_x_ctrl(&attitude_controller);
-    Position_y_ctrl(&attitude_controller);
+    // Position_x_ctrl(&attitude_controller);
+    // Position_y_ctrl(&attitude_controller);
     Position_z_ctrl(&attitude_controller);
-    Position_yaw_ctrl(&attitude_controller);
-
-    lastTimeUs = currentTimeUs;
+    // Position_yaw_ctrl(&attitude_controller);
 }
 
 float Get_vrpn_x(void)

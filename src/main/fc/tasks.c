@@ -402,7 +402,7 @@ task_attribute_t task_attributes[TASK_COUNT] = {
 #endif
 
 #ifdef USE_TELEMETRY
-    [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", NULL, NULL, taskTelemetry, TASK_PERIOD_HZ(80), TASK_PRIORITY_LOW),
+    [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", NULL, NULL, taskTelemetry, TASK_PERIOD_HZ(100), TASK_PRIORITY_LOW),
 #endif
 
 #ifdef USE_LED_STRIP
@@ -455,7 +455,7 @@ task_attribute_t task_attributes[TASK_COUNT] = {
 #endif
 
 #ifdef USE_POSITION_HOLD
-    [TASK_POSITION_CTRL] = DEFINE_TASK("TASK_POSITION_CTRL", NULL, NULL, Update_Position_xy, TASK_PERIOD_HZ(200), TASK_PRIORITY_LOW),
+    //[TASK_POSITION_CTRL] = DEFINE_TASK("TASK_POSITION_CTRL", NULL, NULL, Update_Position_xy, TASK_PERIOD_HZ(200), TASK_PRIORITY_LOW),
 #endif
 };
 

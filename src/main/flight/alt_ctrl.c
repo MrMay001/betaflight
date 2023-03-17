@@ -18,7 +18,7 @@ controller_t attitude_yaw_controller;
 controller_t vel_controller; 
 controller_t height_controller; 
 
-float throttle_init = 0.250;
+static float throttle_init = 0.309;
 float height_setpoint = 0.50;
 float vel_setpoint = 0.20;
 float thrust_range = 0.005;
@@ -30,7 +30,7 @@ float limit = 1;
 void height_controller_init(controller_t * controller)
 {
     memset(controller, 0, sizeof(controller_t));
-    controller->pid.P = 6;
+    controller->pid.P = 1;
     controller->pid.I = 0.0;
     controller->pid.D = 0;
 
@@ -39,8 +39,8 @@ void height_controller_init(controller_t * controller)
     controller->pid.iError = 0.0;
 
     controller->setpoint = 1;
-    controller->output_min = -0.20;
-    controller->output_max = 0.20;
+    controller->output_min = -99999;
+    controller->output_max = 99999;
 
     controller->input_error_range = height_error_range;
 }
@@ -48,7 +48,7 @@ void height_controller_init(controller_t * controller)
 void vel_controller_init(controller_t * controller)
 {
     memset(controller, 0, sizeof(controller_t));
-    controller->pid.P = 4;
+    controller->pid.P = 0.4;
     controller->pid.I = 0.0;
     controller->pid.D = 0;
 
@@ -59,8 +59,8 @@ void vel_controller_init(controller_t * controller)
     controller->setpoint = 0;
     controller->throttle = 0;
 
-    controller->output_min = -0.15;
-    controller->output_max = 0.15;
+    controller->output_min = -0.3;
+    controller->output_max = 0.65;
 
     controller->input_error_range = vel_error_range;
 }
@@ -70,8 +70,8 @@ void Controller_Init(void)
 {
     height_controller_init(&height_controller);
     vel_controller_init(&vel_controller);
-    Position_init();
-    attitude_init(&attitude_controller);
+    // Position_init();
+    // attitude_init(&attitude_controller);
 }
 
 float pid_controller(float process_value, controller_t *controller, float I_limit) //增量式pid计算
@@ -106,20 +106,20 @@ void adjust_velocity(kalman_filter_t *filter)
     float output = pid_controller(filter->X_Hat_current->element[1], &vel_controller, 0.5);
     
     //如果当前速度误差为正，则增加推力
-    if(output > 0.003 || output < -0.003)
-    {
-        vel_controller.throttle = throttle_init + output;
-    }
+    // if(output > 0.003 || output < -0.003)
+    // {
+    vel_controller.throttle = throttle_init + output;
+//    }
     // 如果当前速度误差为负，则减小推力
-    else{
-        vel_controller.throttle = throttle_init;
-    }
+    // else{
+    //     vel_controller.throttle = throttle_init;
+    // }
 
 }
 
 void adjust_height(kalman_filter_t *filter)
 {
-    float output = pid_controller(filter->X_Hat_current->element[0], &height_controller, 1);
+    float output = pid_controller(filter->X_Hat_current->element[0], &height_controller, 0.5);
     // float output = pid_controller(attitude_controller.r_z, &height_controller, 1);
 
     vel_controller.setpoint = output;
@@ -134,11 +134,11 @@ void Update_PID_Velocity(timeUs_t currentTimeUs) //500Hz
 void Update_PID_Height(timeUs_t currentTimeUs) //100Hz
 {
     // UNUSED(currentTimeUs);
-    static timeUs_t lastTimeUs = 0;
-    float dTime = (currentTimeUs - lastTimeUs)*1e-6f;
-    attitude_z_controller.dt = dTime;
+    // static timeUs_t lastTimeUs = 0;
+    // float dTime = (currentTimeUs - lastTimeUs)*1e-6f;
+    // attitude_z_controller.dt = dTime;
     adjust_height(&kalman_filter1);
-    lastTimeUs = currentTimeUs;
+//    lastTimeUs = currentTimeUs;
 }
 
 float Get_Height_PID_Output(void)

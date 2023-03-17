@@ -3308,13 +3308,6 @@ static void cliFeature(const char *cmdName, char *cmdline)
                     break;
                 }
 #endif
-// #ifdef USE_POSITION_HOLD
-//                 if(feature & FEATURE_POSITION_HOLD)
-//                 {
-//                     cliPrintLine("unavailable");
-//                     break;
-//                 }
-// #endif
 #ifndef USE_RANGEFINDER
                 if (feature & FEATURE_RANGEFINDER) {
                     cliPrintLine("unavailable");
