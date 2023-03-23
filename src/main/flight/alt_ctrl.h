@@ -31,18 +31,22 @@ typedef struct controller
     float input_error_range;
 
     float dt;
+    float process_dt;
 
 }controller_t;
 
 extern controller_t attitude_x_controller;
 extern controller_t attitude_y_controller;
 extern controller_t attitude_z_controller;
+extern controller_t vel_x_controller;
+extern controller_t vel_y_controller;
+extern controller_t vel_z_controller;
 extern controller_t attitude_yaw_controller;
 extern controller_t height_controller; 
 extern controller_t vel_controller; 
 
-void height_controller_init(controller_t * controller);
-void vel_controller_init(controller_t * controller);
+void height_controller_init(controller_t * controller, int axis);
+void vel_controller_init(controller_t * controller, int axis);
 void Controller_Init(void);
 
 float pid_controller(float process_value, controller_t *controller, float I_limit);
@@ -52,7 +56,9 @@ void adjust_velocity(kalman_filter_t *filter);
 void Update_PID_Height(timeUs_t currentTimeUs);
 void Update_PID_Velocity(timeUs_t currentTimeUs);
 
-float Get_Height_PID_Output(void);
-float Get_Velocity_PID_Output(void);
-float Get_Velocity_throttle(void);
+// void Position_yaw_ctrl(attitude_ctrl_t * controller);
+
+float Get_Height_PID_Output(int n);
+float Get_Velocity_PID_Output(int n);
+float Get_Velocity_throttle(int n);
 float Get_Height_PID_Error(void);

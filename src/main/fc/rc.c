@@ -72,6 +72,7 @@ static float rawSetpoint[XYZ_AXIS_COUNT];
 static float setpointRate[3], rcDeflection[3], rcDeflectionAbs[3];
 #ifdef USE_POSITION_HOLD
 static float OptiTrack[3], OptiTrackAbs[3];
+static float OptiTrackRate[3];
 #endif
 static bool reverseMotors = false;
 static applyRatesFn *applyRates;
@@ -149,6 +150,11 @@ float getOptiTrackDeflection(int axis)
 float getOptiTrackDeflectionAbs(int axis)
 {
     return OptiTrackAbs[axis];
+}
+
+float getOptiTrackRate(int axis)
+{
+    return OptiTrackRate[axis];
 }
 
 #endif
@@ -597,23 +603,42 @@ FAST_CODE void processRcCommand(void)
                 const float rcCommandfAbs = fabsf(rcCommandf);
                 rcDeflectionAbs[axis] = rcCommandfAbs;
 
-                if(axis == FD_ROLL)
-                {
-                    attitude_send.ROLL = rcDeflection[FD_ROLL];
-                }
-                else if(axis == FD_PITCH)
-                {
-                    attitude_send.PITCH = rcDeflection[FD_PITCH];
-                }
-                else if(axis == FD_YAW)
-                {
-                    attitude_send.YAW = rcDeflection[FD_YAW];
+                // if(axis == FD_ROLL)
+                // {
+                //     attitude_send.ROLL = rcDeflection[FD_ROLL];
+                // }
+                // else if(axis == FD_PITCH)
+                // {
+                //     attitude_send.PITCH = rcDeflection[FD_PITCH];
+                // }
+                // else if(axis == FD_YAW)
+                // {
+                //     attitude_send.YAW = rcDeflection[FD_YAW];
 
-                    OptiTrack[axis] = 0;
-                    OptiTrackAbs[axis] = 0;
-                    rcDeflection[axis] = 0;
-                    rcDeflectionAbs[axis] = 0;
+                //     // OptiTrack[axis] = 0;
+                //     // OptiTrackAbs[axis] = 0;
+                //     // rcDeflection[axis] = 0;
+                //     // rcDeflectionAbs[axis] = 0;
+                // }
+#ifdef USE_POSITION_HOLD
+            if(FLIGHT_MODE(POSITION_HOLD_MODE))
+            {
+                for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
+                {
+                    OptiTrack[0] = Get_Velocity_throttle(1);
+                    OptiTrack[1] = Get_Velocity_throttle(0);
+                    OptiTrack[2] = 0;
+                    // OptiTrack[0] = 0.05;
+                    // OptiTrack[1] = 0.1;
                 }
+                // if(axis == FD_YAW)
+                // {
+                //     OptiTrack[2] = 0;
+                // }
+
+            }
+#endif
+            
 
 
                 angleRate = applyRates(axis, rcCommandf, rcCommandfAbs);

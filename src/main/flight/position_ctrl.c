@@ -20,6 +20,17 @@ void attitude_init(attitude_ctrl_t * controller)
     controller->r_y = 0;
     controller->r_z = 0;
 
+    controller->r_x_lowpassfilter = 0;
+    controller->r_y_lowpassfilter = 0;
+
+    controller->Error_x = 0;
+    controller->Error_y = 0;
+    controller->Error_z = 0;
+
+    controller->Error_x_filter = 0;
+    controller->Error_y_filter = 0;
+    controller->Error_z_filter = 0;
+
     controller->roll = 0;
     controller->pitch = 0;
     controller->yaw = 0;
@@ -124,8 +135,8 @@ void Attitude_Send_Init(attitude_send_t * attitude_send)
 
 void Position_init(void)
 {
-    // x_controller_init(&attitude_x_controller);
-    // y_controller_init(&attitude_y_controller);
+    x_controller_init(&attitude_x_controller);
+    y_controller_init(&attitude_y_controller);
     z_controller_init(&attitude_z_controller);
     // yaw_controller_init(&attitude_yaw_controller);
     Attitude_Send_Init(&attitude_send);
@@ -134,6 +145,8 @@ void Position_init(void)
 void Position_x_ctrl(attitude_ctrl_t * controller)
 {
     float output_x =  pid_controller(controller->r_x, &attitude_x_controller, 10);
+
+    
 
     //如果当前速度误差为正，则增加推力
     if(output_x > 1 || output_x < -1)
@@ -183,30 +196,48 @@ void Position_z_ctrl(attitude_ctrl_t * controller)
     
 // }
 
-void Position_yaw_ctrl(attitude_ctrl_t * controller)
-{
-    float output_yaw =  pid_controller(controller->r_Yaw, &attitude_yaw_controller, 50);
+// void Position_yaw_ctrl(attitude_ctrl_t * controller)
+// {
+//     float output_yaw =  pid_controller(controller->r_Yaw, &attitude_yaw_controller, 50);
 
-    //如果当前速度误差为正，则增加推力
-    if(output_yaw > 0.01 || output_yaw < -0.01)
-    {
-        attitude_yaw_controller.throttle = output_yaw;
-    }
-    // // 如果当前速度误差为负，则减小推力
-    else{
-        attitude_yaw_controller.throttle = 0;
-    }
+//     //如果当前速度误差为正，则增加推力
+//     if(output_yaw > 0.01 || output_yaw < -0.01)
+//     {
+//         attitude_yaw_controller.throttle = output_yaw;
+//     }
+//     // // 如果当前速度误差为负，则减小推力
+//     else{
+//         attitude_yaw_controller.throttle = 0;
+//     }
     
+// }
+
+// RC = 1.0 / (2.0 * PI * cutoff_freq)
+// alpha = 1.0 / (1.0 + RC * sample_rate)
+void Lowpass_Filter(attitude_ctrl_t * ctrl, float alphax, float alphay, int n)
+{
+    UNUSED(n);
+    //ctrl->r_x_filter = alphax * ctrl->r_x + (1 - alphax) * ctrl->r_x_filter
+    ctrl->r_x_lowpassfilter_last = ctrl->r_x_lowpassfilter;
+    ctrl->r_y_lowpassfilter_last = ctrl->r_y_lowpassfilter;
+    ctrl->r_x_lowpassfilter = ctrl->r_x_lowpassfilter + alphax * (ctrl->r_x - ctrl->r_x_lowpassfilter);
+    ctrl->r_y_lowpassfilter = ctrl->r_y_lowpassfilter + alphay * (ctrl->r_y - ctrl->r_y_lowpassfilter);
+
+ //   ctrl->Error_z_filter = ctrl->Error_z_filter + alphay * (ctrl->Error_z - ctrl->Error_z_filter);
 }
 
-void Update_Position_xy(timeUs_t currentTimeUs)
+void Update_Lowpass_Filter(timeUs_t currentTimeUs)
 {
-    UNUSED(currentTimeUs);
-    // attitude_controller.dtHz = dTime;
-    // Position_x_ctrl(&attitude_controller);
-    // Position_y_ctrl(&attitude_controller);
-    Position_z_ctrl(&attitude_controller);
-    // Position_yaw_ctrl(&attitude_controller);
+    static uint64_t lasttime = 0;
+    float dt = (currentTimeUs - lasttime) * 1e-6f;
+    // UNUSED(currentTimeUs);
+
+    Lowpass_Filter(&attitude_controller, 0.45, 0.45, 0);//lowpass_filter
+    attitude_controller.Error_x_filter = (attitude_controller.r_x_lowpassfilter - attitude_controller.r_x_lowpassfilter_last) / dt;
+    attitude_controller.Error_y_filter = (attitude_controller.r_y_lowpassfilter - attitude_controller.r_y_lowpassfilter_last) / dt;
+
+    lasttime = currentTimeUs;
+
 }
 
 float Get_vrpn_x(void)

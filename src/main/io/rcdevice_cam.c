@@ -295,18 +295,19 @@ static void rcdeviceProcessDeviceRequest(runcamDeviceRequest_t *request)
 
 void rcdeviceUpdate(timeUs_t currentTimeUs)
 {
-    rcdeviceReceive(currentTimeUs);
+    UNUSED(currentTimeUs);
+    // rcdeviceReceive(currentTimeUs);
 
-    rcdeviceCameraControlProcess();
+    // rcdeviceCameraControlProcess();
 
-    rcdevice5KeySimulationProcess(currentTimeUs);
+    // rcdevice5KeySimulationProcess(currentTimeUs);
 
-    if (isFeatureSupported(RCDEVICE_PROTOCOL_FEATURE_FC_ATTITUDE)) {
-        runcamDeviceRequest_t *request = rcdeviceGetRequest();
-        if (request) {
-            rcdeviceProcessDeviceRequest(request);
-        }
-    }
+    // if (isFeatureSupported(RCDEVICE_PROTOCOL_FEATURE_FC_ATTITUDE)) {
+    //     runcamDeviceRequest_t *request = rcdeviceGetRequest();
+    //     if (request) {
+    //         rcdeviceProcessDeviceRequest(request);
+    //     }
+    // }
 }
 
 void rcdeviceInit(void)

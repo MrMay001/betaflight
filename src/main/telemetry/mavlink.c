@@ -148,7 +148,6 @@ static void mavlinkReceive(uint16_t c, void* data) {
     // uint8_t mav_version;
 
     if (mavlink_parse_char(MAVLINK_COMM_0, (uint8_t)c, &msg, &status)) {
-    
         switch(msg.msgid) {
             // receive heartbeat
             // case 0: {
@@ -183,29 +182,42 @@ static void mavlinkReceive(uint16_t c, void* data) {
             //     break;
             // }
 
-            // case 84: {
-            //     mavlink_set_position_target_local_ned_t command;
-            //     mavlink_msg_set_position_target_local_ned_decode(&msg,&command);
-            //     attitude_controller.r_Roll = command.afx;
-            //     attitude_controller.r_Pitch = command.afy;
-            //     attitude_controller.r_Yaw = command.afz;
-            //     attitude_controller.sum1++;
-            //     ledSet(1, state1); 
-            //     state1 = !state1;
-            //     break;
-            // }
+            case 84: {
+                mavlink_set_position_target_local_ned_t command;
+                mavlink_msg_set_position_target_local_ned_decode(&msg,&command);
+                attitude_controller.r_Roll = command.afx;
+                attitude_controller.r_Pitch = command.afy;
+                attitude_controller.r_Yaw = command.afz;
+                attitude_controller.sum1++;
+                if(attitude_controller.sum1 == 180)
+                {
+                    attitude_controller.sum1 = 0;
+                }
+                // ledSet(1, state1); 
+                // state1 = !state1;
+                break;
+            }
             case 102:{
                 mavlink_vision_position_estimate_t command;
                 mavlink_msg_vision_position_estimate_decode(&msg,&command);
+                //attitude_controller.Error_x = (command.x - attitude_controller.r_y)/attitude_controller.usec;
+                //attitude_controller.Error_y = (command.y - attitude_controller.r_x)/attitude_controller.usec;
+                //attitude_controller.Error_z = (-command.z - attitude_controller.r_z)/attitude_controller.usec;
                 attitude_controller.r_y = command.x;
                 attitude_controller.r_x = command.y;
                 attitude_controller.r_z = -command.z;
-                attitude_controller.r_Roll = command.roll;
-                attitude_controller.r_Pitch = command.pitch;
-                attitude_controller.r_Yaw = command.yaw;
+                attitude_controller.sum++;
+                if(attitude_controller.sum == 180)
+                {
+                    attitude_controller.sum = 0;
+                }
+                // attitude_controller.r_Roll = command.roll;
+                // attitude_controller.r_Pitch = command.pitch;
+                // attitude_controller.r_Yaw = command.yaw;
                 // attitude_controller.sum++;
                 kalman_filter1.Z_current->element[0] = -command.z;
                 kalman_filter1.optitrack_update = 1;
+                // mavlinkSendHUD();
                 // if(state1 == 1)
                 // {
                 // mavlinksendAltitude();
@@ -345,24 +357,24 @@ void mavlinkSendAttitude(void) //ID 30
         millis(),
         // roll Roll angle (rad)
         DECIDEGREES_TO_RADIANS(attitude.values.roll),
-        // // pitch Pitch angle (rad)
+        // pitch Pitch angle (rad)
         DECIDEGREES_TO_RADIANS(-attitude.values.pitch),
-        // // yaw Yaw angle (rad)
+        // yaw Yaw angle (rad)
         DECIDEGREES_TO_RADIANS(attitude.values.yaw),
-        // // rollspeed Roll angular speed (rad/s)
+        // rollspeed Roll angular speed (rad/s)
         DEGREES_TO_RADIANS(gyro.gyroADCf[FD_ROLL]),
-        // // pitchspeed Pitch angular speed (rad/s)
+        // pitchspeed Pitch angular speed (rad/s)
         DEGREES_TO_RADIANS(gyro.gyroADCf[FD_PITCH]),
-        // // yawspeed Yaw angular speed (rad/s)
+        // yawspeed Yaw angular speed (rad/s)
         DEGREES_TO_RADIANS(gyro.gyroADCf[FD_YAW])
-        // attitude_controller.r_x,  //monotonic
-        // attitude_controller.r_y,  //amsl
-        // attitude_controller.r_z, //loacl
+        // attitude_controller.r_x,  //roll
+        // attitude_controller.r_y,  //pitch
+        // attitude_controller.r_z, //yaw
         // // attitude_controller.r_Roll,
-        // attitude_controller.r_Roll,  //relative
+        // attitude_controller.r_Roll,  //rollspeed
         // // attitude_controller.r_Yaw 
-        // attitude_controller.r_Pitch,  //terrain
-        // attitude_controller.r_Yaw  //clearance
+        // attitude_controller.r_Pitch,  //pitchspeed
+        // attitude_controller.r_Yaw  //yawspeed
         );
         
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
@@ -392,12 +404,19 @@ void mavlinksendAltitude(void) //ID 141
 
     mavlink_msg_altitude_pack(0, 200, &mavMsg,
     millis(),
-    attitude_send.ROLL/180*3.1415926,
-    attitude_send.PITCH/180*3.1415926,
-    attitude_send.YAW/180*3.1415926,
-    attitude_send.ROLL_rate,
-    -attitude_send.PITCH_rate,
-    -attitude_send.YAW_rate
+    // attitude_send.ROLL/180*3.1415926,
+    // attitude_send.PITCH/180*3.1415926,
+    // attitude_send.YAW/180*3.1415926,
+    // attitude_send.ROLL_rate,
+    // -attitude_send.PITCH_rate,
+    // -attitude_send.YAW_rate
+
+    Get_Height_PID_Output(0),  //altitude_monotonic
+    Get_Height_PID_Output(1),  //altitude_amsl
+    Get_Height_PID_Output(2),  //altitude_local
+    vel_x_controller.setpoint, //altitude_relative
+    vel_y_controller.setpoint,  //altitude_terrain
+    vel_z_controller.setpoint  //bottom_clearance
     // attitude_controller.r_x,  //monotonic
     // attitude_controller.r_y,  //amsl
     // attitude_controller.r_z, //loacl
@@ -414,32 +433,40 @@ void mavlinksendAltitude(void) //ID 141
 void mavlinkSendHUD(void) //ID 74
 {
     uint16_t msgLength;
-    float mav_z_ierror = 0;
-    float mav_z_throttle = 0;
-    float mavAirSpeed = 0;
-    float mavClimbRate = 0;
-    float mav_Yaw = 0;
+    // float mav_z_ierror = 0;
+    // float mav_z_throttle = 0;
+    // float mavAirSpeed = 0;
+    // float mavClimbRate = 0;
+    // float mav_Yaw = 0;
 
 
     // mav_z_ierror = Get_Height_PID_Error();
     // mav_z_throttle = Get_Velocity_throttle();
     // mavClimbRate = attitude_controller.r_y;
     // mav_Yaw = Get_vrpn_Yaw();
-
+    //airspeed  groundspeed  heading throttle alt climb
     mavlink_msg_vfr_hud_pack(0, 200, &mavMsg,
         // airspeed Current airspeed in m/s
-        Get_Height_PID_Output(),
-        kalman_filter1.X_Hat_current->element[1],
+        // Get_Velocity_throttle(0),  //roll
+        // Get_Velocity_throttle(1),  //pitch
+        attitude_controller.error_angle,
+        attitude_controller.error_angle_output,
+        // attitude_controller.r_x_lowpassfilter,
+        // attitude_controller.r_y_lowpassfilter,
+        // attitude_controller.r_z, //yaw
+        // attitude_controller.Error_x,
+        // attitude_controller.Error_x_filter,
         // groundspeed Current ground speed in m/s
         //attitude_controller.r_Pitch,
         // heading Current heading in degrees, in compass units (0..360, 0=north)
-        headingOrScaledMilliAmpereHoursDrawn(),
+        attitude_controller.sum,
+        //headingOrScaledMilliAmpereHoursDrawn(),
         // throttle Current throttle setting in integer percent, 0 to 100
         scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
         // alt Current altitude (MSL), in meters, if we have sonar or baro use them, otherwise use GPS (less accurate)
         //attitude_controller.r_Yaw,
-        Get_Alt_Kalman(),
-        Get_Velocity_PID_Output()
+        attitude_controller.r_Yaw, //yaw
+        (float)attitude_controller.sum1
         );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
@@ -519,8 +546,8 @@ void mavlinkSendHeartbeat(void)  //ID 0
         // base_mode System mode bitfield, see MAV_MODE_FLAGS ENUM in mavlink/include/mavlink_types.h
         mavModes,
         // custom_mode A bitfield for use for autopilot-specific flags.
-        // mavCustomMode,
-        (uint8_t)attitude_controller.sum,
+        mavCustomMode,
+        // (uint8_t)attitude_controller.sum,
         // system_status System status flag, see MAV_STATE ENUM
         mavSystemState);
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);

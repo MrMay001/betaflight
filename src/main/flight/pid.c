@@ -317,14 +317,14 @@ static float getLevelModeRcDeflection(uint8_t axis)
 static float OptiTrackCtrlAngle(uint8_t axis)
 {
     const float TrajectorySettingBias = getOptiTrackDeflection(axis);
-    if(axis < FD_YAW)
-    {
-        const float expof = currentControlRateProfile->levelExpo[axis] / 100.0f;
-        return power3(TrajectorySettingBias) * expof + TrajectorySettingBias * (1 - expof);
+    // if(axis < FD_YAW)
+    // {
+    //     const float expof = currentControlRateProfile->levelExpo[axis] / 100.0f;
+    //     return power3(TrajectorySettingBias) * expof + TrajectorySettingBias * (1 - expof);
 
-    }else{
+    // }else{
         return TrajectorySettingBias;
-    }
+    //}
 }
 
 
@@ -410,24 +410,29 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
 #ifdef USE_GPS_RESCUE
     angle += gpsRescueAngle[axis] / 100; // ANGLE IS IN CENTIDEGREES
 #endif
+    angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);
 #ifdef USE_POSITION_HOLD
     if(FLIGHT_MODE(POSITION_HOLD_MODE))
     {
-        if(axis == FD_YAW)
-        {
-            angle = levelAngleLimit * OptiTrackCtrlAngle(axis);
-        }
+        //  if(axis <= FD_PITCH)
+        //  {
+        angle = OptiTrackCtrlAngle(axis);
+//         }
     }
 #endif
-    angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);
+    // if(axis == FD_YAW)
+    // {
+    //     attitude_controller.yaw = angle;
+    // }
 
     // const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
     float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
-    if(axis == FD_YAW)
-    {
-        angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);  //limit Yaw deg
-        errorAngle = angle - attitude_controller.r_Yaw;  //OptiTrack Yaw data
-    }
+    // if(axis == FD_YAW)
+    // {
+    //     // angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);  //limit Yaw deg
+    //    errorAngle = -(angle - attitude_controller.r_Yaw);  //OptiTrack Yaw data
+    //    attitude_controller.error_angle = errorAngle;
+    // }
     // add new yaw pid
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE))
     {
@@ -1016,16 +1021,15 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         // //new add yaw pid
 #endif
 
-#ifdef USE_POSITION_HOLD
-    if(FLIGHT_MODE(POSITION_HOLD_MODE))
-    {
-        if(axis == FD_YAW) //此时也限制了YAW的角度范围
-        {
-            currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
-            DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
-        }
-    }
-#endif
+// #ifdef USE_POSITION_HOLD
+//     if(FLIGHT_MODE(POSITION_HOLD_MODE))
+//     {
+//         if(axis == FD_YAW) //此时也限制了YAW的角度范围
+//         {
+//             currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
+//         }
+//     }
+// #endif
 
 #ifdef USE_ACRO_TRAINER
         if ((axis != FD_YAW) && pidRuntime.acroTrainerActive && !pidRuntime.inCrashRecoveryMode && !launchControlActive)
@@ -1053,10 +1057,38 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
             currentPidSetpoint = 0.0f;
         }
 #endif // USE_YAW_SPIN_RECOVERY
+ #ifdef USE_POSITION_HOLD
+        if(FLIGHT_MODE(POSITION_HOLD_MODE))
+        {
+            if(axis == FD_YAW)
+            {
+                float errorAngle = OptiTrackCtrlAngle(2) - attitude_controller.r_Yaw;//OptiTrack Yaw data
+                // angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);  //limit Yaw deg
+                attitude_controller.error_angle = errorAngle;
+                currentPidSetpoint = errorAngle * -1.0f;  //kp=-1.0
+                attitude_controller.error_angle_output = currentPidSetpoint;
+            }
+            // if (axis == FD_YAW)
+            // {
+
+            //     attitude_controller.error_angle_output = currentPidSetpoint;
+            // }
+        }
+#endif
+
 
         // -----calculate error rate
         const float gyroRate = gyro.gyroADCf[axis];      // Process variable from gyro output in deg/sec
         float errorRate = currentPidSetpoint - gyroRate; // r - y
+
+//add position_hold
+// #ifdef USE_POSITION_HOLD   //set rate  deg/s
+//         if(FLIGHT_MODE(POSITION_HOLD_MODE))
+//         {
+//             errorRate = getOptiTrackRate(axis) - gyroRate;
+//         }
+// #endif
+
 #if defined(USE_ACC)
         handleCrashRecovery(
             pidProfile->crash_recovery, angleTrim, axis, currentTimeUs, gyroRate,

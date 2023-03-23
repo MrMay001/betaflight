@@ -51,4 +51,5 @@ bool getRxRateValid(void);
 #ifdef USE_POSITION_HOLD
 float getOptiTrackDeflection(int axis);
 float getOptiTrackDeflectionAbs(int axis);
+float getOptiTrackRate(int axis);
 #endif
