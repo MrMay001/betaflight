@@ -51,7 +51,7 @@
 #include "flight/mixer.h"
 #include "flight/rpm_filter.h"
 #include "flight/feedforward.h"
-#include "flight/position_ctrl.h"
+#include "flight/alt_ctrl.h"
 
 #include "io/gps.h"
 
@@ -1112,18 +1112,6 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         const float setpointCorrection = currentPidSetpoint - uncorrectedSetpoint;
 #endif
 
-        if (axis == FD_ROLL)
-        {
-            attitude_send.ROLL_rate = currentPidSetpoint / 180 * 3.1415926f;
-        }
-        else if (axis == FD_PITCH)
-        {
-            attitude_send.PITCH_rate = currentPidSetpoint / 180 * 3.1415926f;
-        }
-        else if (axis == FD_YAW)
-        {
-            attitude_send.YAW_rate = currentPidSetpoint / 180 * 3.1415926f;
-        }
         // --------low-level gyro-based PID based on 2DOF PID controller. ----------
         // 2-DOF PID controller with optional filter on derivative term.
         // b = 1 and only c (feedforward weight) can be tuned (amount derivative on measurement or error).

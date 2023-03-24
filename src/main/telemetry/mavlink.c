@@ -60,7 +60,6 @@
 #include "flight/position.h"
 #include "flight/alt_ctrl.h"
 #include "flight/kalman_filter.h"
-#include "flight/position_ctrl.h"
 
 #include "io/serial.h"
 #include "io/gimbal.h"
@@ -185,8 +184,8 @@ static void mavlinkReceive(uint16_t c, void* data) {
             case 84: {
                 mavlink_set_position_target_local_ned_t command;
                 mavlink_msg_set_position_target_local_ned_decode(&msg,&command);
-                attitude_controller.r_Roll = command.afx;
-                attitude_controller.r_Pitch = command.afy;
+                attitude_y_controller.setpoint_input = command.afx;
+                attitude_x_controller.setpoint_input = command.afy;
                 attitude_controller.r_Yaw = command.afz;
                 attitude_controller.sum1++;
                 if(attitude_controller.sum1 == 180)
@@ -348,130 +347,6 @@ void checkMAVLinkTelemetryState(void)
     }
 }
 
-
-void mavlinkSendAttitude(void) //ID 30
-{
-    uint16_t msgLength;
-    mavlink_msg_attitude_pack(0, 200, &mavMsg,
-        // time_boot_ms Timestamp (milliseconds since system boot)
-        millis(),
-        // roll Roll angle (rad)
-        DECIDEGREES_TO_RADIANS(attitude.values.roll),
-        // pitch Pitch angle (rad)
-        DECIDEGREES_TO_RADIANS(-attitude.values.pitch),
-        // yaw Yaw angle (rad)
-        DECIDEGREES_TO_RADIANS(attitude.values.yaw),
-        // rollspeed Roll angular speed (rad/s)
-        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_ROLL]),
-        // pitchspeed Pitch angular speed (rad/s)
-        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_PITCH]),
-        // yawspeed Yaw angular speed (rad/s)
-        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_YAW])
-        // attitude_controller.r_x,  //roll
-        // attitude_controller.r_y,  //pitch
-        // attitude_controller.r_z, //yaw
-        // // attitude_controller.r_Roll,
-        // attitude_controller.r_Roll,  //rollspeed
-        // // attitude_controller.r_Yaw 
-        // attitude_controller.r_Pitch,  //pitchspeed
-        // attitude_controller.r_Yaw  //yawspeed
-        );
-        
-    msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
-    mavlinkSerialWrite(mavBuffer, msgLength);
-}
-
-void mavlinksendAltitude(void) //ID 141
-{
-    uint16_t msgLength;
-    // float mavAltitude_Measure = 0;
-    // float mavVel_Hat_current = 0;
-    // float mavVel_Measure = 0;
-    // float mavAltitude_Hat_current = 0;
-    // float mavPID_vel_output = 0;
-    // float mavPID_height_output = 0;
-    // float mav_vel_throttle = 0;
-
-    
-    // mavVel_Measure = Get_Acc_bias_kalman(); //速度测量值  (airspeed)
-    // mavVel_Hat_current = Get_Vel_Kalman(); //速度最优估计值 (groundspeed)
-    // // mavAltitude_Measure = rangefinderGetLatestAltitude(); //高度测量值 (altitude)
-    // mavAltitude_Measure = Get_z_measure();
-    // mavAltitude_Hat_current = Get_Alt_Kalman(); //高度最优估计值 (climb)
-    // mavPID_height_output = Get_Height_PID_Output(); //获取外环pid结果
-    // mavPID_vel_output = Get_Velocity_PID_Output(); //获取内环pid结果
-    // mav_vel_throttle = Get_Velocity_throttle();
-
-    mavlink_msg_altitude_pack(0, 200, &mavMsg,
-    millis(),
-    // attitude_send.ROLL/180*3.1415926,
-    // attitude_send.PITCH/180*3.1415926,
-    // attitude_send.YAW/180*3.1415926,
-    // attitude_send.ROLL_rate,
-    // -attitude_send.PITCH_rate,
-    // -attitude_send.YAW_rate
-
-    Get_Height_PID_Output(0),  //altitude_monotonic
-    Get_Height_PID_Output(1),  //altitude_amsl
-    Get_Height_PID_Output(2),  //altitude_local
-    vel_x_controller.setpoint, //altitude_relative
-    vel_y_controller.setpoint,  //altitude_terrain
-    vel_z_controller.setpoint  //bottom_clearance
-    // attitude_controller.r_x,  //monotonic
-    // attitude_controller.r_y,  //amsl
-    // attitude_controller.r_z, //loacl
-    // // attitude_controller.r_Roll,
-    // attitude_controller.r_Roll,  //relative
-    // // attitude_controller.r_Yaw 
-    // attitude_controller.r_Pitch,  //terrain
-    // attitude_controller.r_Yaw  //clearance
-    );
-    msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
-    mavlinkSerialWrite(mavBuffer, msgLength);
-}
-
-void mavlinkSendHUD(void) //ID 74
-{
-    uint16_t msgLength;
-    // float mav_z_ierror = 0;
-    // float mav_z_throttle = 0;
-    // float mavAirSpeed = 0;
-    // float mavClimbRate = 0;
-    // float mav_Yaw = 0;
-
-
-    // mav_z_ierror = Get_Height_PID_Error();
-    // mav_z_throttle = Get_Velocity_throttle();
-    // mavClimbRate = attitude_controller.r_y;
-    // mav_Yaw = Get_vrpn_Yaw();
-    //airspeed  groundspeed  heading throttle alt climb
-    mavlink_msg_vfr_hud_pack(0, 200, &mavMsg,
-        // airspeed Current airspeed in m/s
-        // Get_Velocity_throttle(0),  //roll
-        // Get_Velocity_throttle(1),  //pitch
-        attitude_controller.error_angle,
-        attitude_controller.error_angle_output,
-        // attitude_controller.r_x_lowpassfilter,
-        // attitude_controller.r_y_lowpassfilter,
-        // attitude_controller.r_z, //yaw
-        // attitude_controller.Error_x,
-        // attitude_controller.Error_x_filter,
-        // groundspeed Current ground speed in m/s
-        //attitude_controller.r_Pitch,
-        // heading Current heading in degrees, in compass units (0..360, 0=north)
-        attitude_controller.sum,
-        //headingOrScaledMilliAmpereHoursDrawn(),
-        // throttle Current throttle setting in integer percent, 0 to 100
-        scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
-        // alt Current altitude (MSL), in meters, if we have sonar or baro use them, otherwise use GPS (less accurate)
-        //attitude_controller.r_Yaw,
-        attitude_controller.r_Yaw, //yaw
-        (float)attitude_controller.sum1
-        );
-    msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
-    mavlinkSerialWrite(mavBuffer, msgLength);
-}
-
 void mavlinkSendHeartbeat(void)  //ID 0
 {
     uint16_t msgLength;
@@ -554,28 +429,189 @@ void mavlinkSendHeartbeat(void)  //ID 0
     mavlinkSerialWrite(mavBuffer, msgLength);
 }
 
-void mavlinkLocalPositionNed(void) //ID 32
+
+void mavlinkSendAttitude(void) //ID 30
 {
     uint16_t msgLength;
-    float r_x = Get_vrpn_x();
-    float r_y = Get_vrpn_y();
-    float r_z = Get_vrpn_z();
+    mavlink_msg_attitude_pack(0, 200, &mavMsg,
+        // time_boot_ms Timestamp (milliseconds since system boot)
+        millis(),
+        // roll Roll angle (rad)
+        DECIDEGREES_TO_RADIANS(attitude.values.roll),
+        // pitch Pitch angle (rad)
+        DECIDEGREES_TO_RADIANS(-attitude.values.pitch),
+        // yaw Yaw angle (rad)
+        DECIDEGREES_TO_RADIANS(attitude.values.yaw),
+        // rollspeed Roll angular speed (rad/s)
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_ROLL]),
+        // pitchspeed Pitch angular speed (rad/s)
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_PITCH]),
+        // yawspeed Yaw angular speed (rad/s)
+        DEGREES_TO_RADIANS(gyro.gyroADCf[FD_YAW])
+        // attitude_controller.r_x,  //roll
+        // attitude_controller.r_y,  //pitch
+        // attitude_controller.r_z, //yaw
+        // // attitude_controller.r_Roll,
+        // attitude_controller.r_Roll,  //rollspeed
+        // // attitude_controller.r_Yaw 
+        // attitude_controller.r_Pitch,  //pitchspeed
+        // attitude_controller.r_Yaw  //yawspeed
+        );
+        
+    msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
+    mavlinkSerialWrite(mavBuffer, msgLength);
+}
 
-    // float r_Roll = Get_vrpn_Roll();
-    // float r_Pitch = Get_vrpn_Pitch();
-    // float r_Yaw = Get_vrpn_Yaw();
-    mavlink_msg_local_position_ned_pack(0, 200, &mavMsg,
-    micros(),
-    Get_Alt_Kalman(),
-    Get_Vel_Kalman(),
-    Get_Acc_bias_kalman(),
-    0,
-    0,
-    0
+void mavlinksendAltitude(void) //ID 141
+{
+    uint16_t msgLength;
+    // float mavAltitude_Measure = 0;
+    // float mavVel_Hat_current = 0;
+    // float mavVel_Measure = 0;
+    // float mavAltitude_Hat_current = 0;
+    // float mavPID_vel_output = 0;
+    // float mavPID_height_output = 0;
+    // float mav_vel_throttle = 0;
+
+    
+    // mavVel_Measure = Get_Acc_bias_kalman(); //速度测量值  (airspeed)
+    // mavVel_Hat_current = Get_Vel_Kalman(); //速度最优估计值 (groundspeed)
+    // // mavAltitude_Measure = rangefinderGetLatestAltitude(); //高度测量值 (altitude)
+    // mavAltitude_Measure = Get_z_measure();
+    // mavAltitude_Hat_current = Get_Alt_Kalman(); //高度最优估计值 (climb)
+    // mavPID_height_output = Get_Height_PID_Output(); //获取外环pid结果
+    // mavPID_vel_output = Get_Velocity_PID_Output(); //获取内环pid结果
+    // mav_vel_throttle = Get_Velocity_throttle();
+
+    mavlink_msg_altitude_pack(0, 200, &mavMsg,
+    millis(),
+    // attitude_send.ROLL/180*3.1415926,
+    // attitude_send.PITCH/180*3.1415926,
+    // attitude_send.YAW/180*3.1415926,
+    // attitude_send.ROLL_rate,
+    // -attitude_send.PITCH_rate,
+    // -attitude_send.YAW_rate
+
+    -Get_Height_PID_Output(0),  //altitude_monotonic
+    Get_Height_PID_Output(1),  //altitude_amsl
+    Get_Height_PID_Output(2),  //altitude_local
+    Get_Velocity_PID_Output(0)*180.0/3.1415926f, //altitude_relative
+    Get_Velocity_PID_Output(1)*180.0/3.1415926f,  //altitude_terrain
+    Get_Velocity_PID_Output(2)  //bottom_clearance
+    // attitude_controller.r_x,  //monotonic
+    // attitude_controller.r_y,  //amsl
+    // attitude_controller.r_z, //loacl
+    // // attitude_controller.r_Roll,
+    // attitude_controller.r_Roll,  //relative
+    // // attitude_controller.r_Yaw 
+    // attitude_controller.r_Pitch,  //terrain
+    // attitude_controller.r_Yaw  //clearance
     );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
 }
+
+void mavlinkSendHUD(void) //ID 74
+{
+    uint16_t msgLength;
+    // float mav_z_ierror = 0;
+    // float mav_z_throttle = 0;
+    // float mavAirSpeed = 0;
+    // float mavClimbRate = 0;
+    // float mav_Yaw = 0;
+
+
+    // mav_z_ierror = Get_Height_PID_Error();
+    // mav_z_throttle = Get_Velocity_throttle();
+    // mavClimbRate = attitude_controller.r_y;
+    // mav_Yaw = Get_vrpn_Yaw();
+    //airspeed  groundspeed  heading throttle alt climb
+    mavlink_msg_vfr_hud_pack(0, 200, &mavMsg,
+        // airspeed Current airspeed in m/s
+        // Get_Velocity_throttle(0),  //roll
+        // Get_Velocity_throttle(1),  //pitch
+        Get_Velocity_LpFiter(0),
+        Get_Velocity_LpFiter(1),
+        // attitude_controller.r_x_lowpassfilter,
+        // attitude_controller.r_y_lowpassfilter,
+        // attitude_controller.r_z, //yaw
+        // attitude_controller.Error_x,
+        // attitude_controller.Error_x_filter,
+        // groundspeed Current ground speed in m/s
+        //attitude_controller.r_Pitch,
+        // heading Current heading in degrees, in compass units (0..360, 0=north)
+        attitude_controller.sum,
+        //headingOrScaledMilliAmpereHoursDrawn(),
+        // throttle Current throttle setting in integer percent, 0 to 100
+        scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
+        // alt Current altitude (MSL), in meters, if we have sonar or baro use them, otherwise use GPS (less accurate)
+        //attitude_controller.r_Yaw,
+        (float)attitude_controller.sum1, //yaw
+        Get_Velocity_LpFiter(2)
+        );
+    msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
+    mavlinkSerialWrite(mavBuffer, msgLength);
+}
+
+
+// void mavlinkLocalPositionNed(void) //ID 32
+// {
+//     uint16_t msgLength;
+//     float r_x = Get_vrpn_x();
+//     float r_y = Get_vrpn_y();
+//     float r_z = Get_vrpn_z();
+
+//     // float r_Roll = Get_vrpn_Roll();
+//     // float r_Pitch = Get_vrpn_Pitch();
+//     // float r_Yaw = Get_vrpn_Yaw();
+//     mavlink_msg_local_position_ned_pack(0, 200, &mavMsg,
+//     micros(),
+//     Get_Alt_Kalman(),
+//     Get_Vel_Kalman(),
+//     Get_Acc_bias_kalman(),
+//     0,
+//     0,
+//     0
+//     );
+//     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
+//     mavlinkSerialWrite(mavBuffer, msgLength);
+// }
+
+void mavlinkLocalPositionNedCov(void)  //ID 64
+{
+    uint16_t msgLength;
+    mavlink_msg_local_position_ned_cov_pack(0, 200, &mavMsg,
+        micros(),
+        0,
+        Get_Position_LpFiter(1),
+        Get_Position_LpFiter(0),
+        -Get_Position_LpFiter(2),
+        Get_Velocity_LpFiter(1),
+        Get_Velocity_LpFiter(0),
+        -Get_Velocity_LpFiter(2),
+        attitude_controller.error_angle,
+        attitude_controller.error_angle_output,
+        attitude_controller.r_Yaw,
+        0
+    );
+    msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
+    mavlinkSerialWrite(mavBuffer, msgLength);
+}
+// void mavlinkLocalPositionNedSystemGlobalOffset(void) //89
+// {
+//     uint16_t msgLength;
+//     mavlink_msg_local_position_ned_system_global_offset_pack(0, 200, &mavMsg,
+//         millis(),
+//         Get_Position_LpFiter(1),
+//         Get_Position_LpFiter(0),
+//         -Get_Position_LpFiter(2),
+//         Get_Velocity_LpFiter(0),
+//         Get_Velocity_LpFiter(1),
+//         Get_Velocity_LpFiter(2)
+//     );
+//     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
+//     mavlinkSerialWrite(mavBuffer, msgLength);
+// }
 
 void processMAVLinkTelemetry(void)
 {
@@ -618,6 +654,8 @@ void processMAVLinkTelemetry(void)
     mavlinkSendAttitude();
     mavlinksendAltitude();
     mavlinkSendHUD();
+    mavlinkLocalPositionNedCov();
+    // mavlinkLocalPositionNedSystemGlobalOffset();
     // mavlinkLocalPositionNed();
     // serialWrite(mavlinkPort,"success");
     // serialWrite(mavlinkPort,62);

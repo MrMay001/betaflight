@@ -8,10 +8,13 @@
 #include "drivers/time.h"
 
 #include "flight/alt_ctrl.h"
-#include "flight/position_ctrl.h"
+#include "fc/runtime_config.h"
 #include "sensors/rangefinder.h"
 
 #include "kalman_filter.h"
+
+attitude_send_t attitude_send;
+attitude_ctrl_t attitude_controller;
 
 controller_t attitude_x_controller;
 controller_t attitude_y_controller;
@@ -24,19 +27,15 @@ controller_t vel_controller;
 controller_t height_controller; 
 
 static float throttle_init = 0.3;
-// float height_setpoint = 0.50;
-// float vel_setpoint = 0.20;
-// float thrust_range = 0.005;
 float height_error_range = 0.02;
 float vel_error_range = 0.01;
-// float limit = 1;
 
-void height_controller_init(controller_t * controller, int axis)
+void position_controller_init(controller_t * controller, int axis)
 {
     memset(controller, 0, sizeof(controller_t));
     if(axis == 0)
     {
-        controller->pid.P = 1;
+        controller->pid.P = 0.85;
         controller->pid.I = 0.0;
         controller->pid.D = 0;
 
@@ -53,7 +52,7 @@ void height_controller_init(controller_t * controller, int axis)
     }
     if(axis == 1)
     {
-        controller->pid.P = 1;
+        controller->pid.P = 1.1;
         controller->pid.I = 0.0;
         controller->pid.D = 0;
 
@@ -109,7 +108,7 @@ void vel_controller_init(controller_t * controller, int axis)
     }
     if(axis == 1)
     {
-        controller->pid.P = -10;
+        controller->pid.P = -8.5;
         controller->pid.I = 0.0;
         controller->pid.D = 0;
 
@@ -129,7 +128,7 @@ void vel_controller_init(controller_t * controller, int axis)
     if(axis == 2)
     {
         controller->pid.P = 0.4;
-        controller->pid.I = 0.0;
+        controller->pid.I = 0.05;
         controller->pid.D = 0;
 
         controller->pid.Error1 = 0.0;
@@ -150,14 +149,12 @@ void vel_controller_init(controller_t * controller, int axis)
 
 void Controller_Init(void)
 {
-    height_controller_init(&attitude_x_controller, 0);
-    height_controller_init(&attitude_y_controller, 1);
-    height_controller_init(&attitude_z_controller, 2);
+    position_controller_init(&attitude_x_controller, 0);
+    position_controller_init(&attitude_y_controller, 1);
+    position_controller_init(&attitude_z_controller, 2);
     vel_controller_init(&vel_x_controller, 0);
     vel_controller_init(&vel_y_controller, 1);
     vel_controller_init(&vel_z_controller, 2);
-    // Position_init();
-    // attitude_init(&attitude_controller);
 }
 
 float pid_controller(float process_value, controller_t *controller, float I_limit) //增量式pid计算
@@ -175,10 +172,6 @@ float pid_controller(float process_value, controller_t *controller, float I_limi
                         + controller->pid.I * controller->pid.IiError 
                         + controller->pid.D * controller->pid.DiError;
 
-    // controller->output = controller->pid.P * (controller->pid.iError - controller->pid.Error1)
-    //                      + controller->pid.I * controller->pid.iError
-    //                      + controller->pid.D * (controller->pid.iError - 2 * controller->pid.Error1 + controller->pid.Error2);
-
     controller->pid.Error2 = controller->pid.Error1;
     controller->pid.Error1 = controller->pid.iError;
 
@@ -187,18 +180,37 @@ float pid_controller(float process_value, controller_t *controller, float I_limi
     return controller->output;
 }
 
-void adjust_velocity(kalman_filter_t *filter)
+// RC = 1.0 / (2.0 * PI * cutoff_freq) 
+// alpha = 1.0 / (1.0 + RC * sample_rate)
+void Lowpass_Filter(attitude_ctrl_t * ctrl, float alphax, float alphay, int n)  //filter
 {
-    float voutputx = pid_controller(attitude_controller.Error_x_filter, &vel_x_controller, 0.5);
-    float voutputy = pid_controller(attitude_controller.Error_y_filter, &vel_y_controller, 0.5);
-    float voutputz = pid_controller(filter->X_Hat_current->element[1], &vel_z_controller, 0.5);
-    
-    vel_x_controller.throttle = voutputx;
-    vel_y_controller.throttle = voutputy;
-    vel_z_controller.throttle = voutputz + throttle_init;
+    UNUSED(n);
+    //ctrl->r_x_filter = alphax * ctrl->r_x + (1 - alphax) * ctrl->r_x_filter
+    ctrl->r_x_lowpassfilter_last = ctrl->r_x_lowpassfilter;
+    ctrl->r_y_lowpassfilter_last = ctrl->r_y_lowpassfilter;
+    ctrl->r_x_lowpassfilter = ctrl->r_x_lowpassfilter + alphax * (ctrl->r_x - ctrl->r_x_lowpassfilter);
+    ctrl->r_y_lowpassfilter = ctrl->r_y_lowpassfilter + alphay * (ctrl->r_y - ctrl->r_y_lowpassfilter);
+
+ //   ctrl->Error_z_filter = ctrl->Error_z_filter + alphay * (ctrl->Error_z - ctrl->Error_z_filter);
 }
 
-void adjust_height(kalman_filter_t *filter)
+//Lowpass_Filter
+void Update_Lowpass_Filter(timeUs_t currentTimeUs)
+{
+    static uint64_t lasttime = 0;
+    float dt = (currentTimeUs - lasttime) * 1e-6f;
+    attitude_controller.filter_dt = dt;
+
+    Lowpass_Filter(&attitude_controller, 0.2, 0.2, 0);//lowpass_filter
+    attitude_controller.Error_x_filter = (attitude_controller.r_x_lowpassfilter - attitude_controller.r_x_lowpassfilter_last) / dt;
+    attitude_controller.Error_y_filter = (attitude_controller.r_y_lowpassfilter - attitude_controller.r_y_lowpassfilter_last) / dt;
+
+    lasttime = currentTimeUs;
+
+}
+
+//
+void adjust_position(kalman_filter_t *filter)
 {
     float outputx = pid_controller(attitude_controller.r_x_lowpassfilter, &attitude_x_controller, 0.5);
     float outputy = pid_controller(attitude_controller.r_y_lowpassfilter, &attitude_y_controller, 0.5);
@@ -210,31 +222,45 @@ void adjust_height(kalman_filter_t *filter)
     adjust_velocity(&kalman_filter1); 
 }
 
-// void Position_yaw_ctrl(attitude_ctrl_t * controller)
-// {
-//     float output_yaw =  pid_controller(controller->r_Yaw, &attitude_yaw_controller, 50);
-// }
+void adjust_velocity(kalman_filter_t *filter)
+{
+    float voutputx = pid_controller(attitude_controller.Error_x_filter, &vel_x_controller, 0.5);
+    float voutputy = pid_controller(attitude_controller.Error_y_filter, &vel_y_controller, 0.5);
+    float voutputz = pid_controller(filter->X_Hat_current->element[1], &vel_z_controller, 0.1);
+    
+    vel_x_controller.throttle = voutputx;
+    vel_y_controller.throttle = voutputy;
+    vel_z_controller.throttle = voutputz + throttle_init;
+}
+
 
 void Update_PID_Velocity(timeUs_t currentTimeUs) //500Hz
 {
     UNUSED(currentTimeUs);
     adjust_velocity(&kalman_filter1);
 }
-void Update_PID_Height(timeUs_t currentTimeUs) //200Hz
+void Update_PID_Position(timeUs_t currentTimeUs) //200Hz
 {
     // UNUSED(currentTimeUs);
     static timeUs_t lastTimeUs = 0;
-    // uint32_t ProcessTimeUs = micros();
     float dTime = (currentTimeUs - lastTimeUs)*1e-6f;
-    // Lowpass_Filter(&attitude_controller, 0.45, 0.45, 0);
-    attitude_controller.dt = dTime;
-    adjust_height(&kalman_filter1);
-    // attitude_controller.dtHz = (micros() - ProcessTimeUs) * 1e-3f;
+    attitude_controller.pidupdate_dt = dTime;
+    if(FLIGHT_MODE(POSITION_HOLD_MODE))
+    {
+        attitude_x_controller.setpoint = attitude_x_controller.setpoint_input;
+        attitude_y_controller.setpoint = attitude_y_controller.setpoint_input;
+    }
+    else{
+        attitude_x_controller.setpoint = 0;
+        attitude_y_controller.setpoint = 0;
+    }
+    adjust_position(&kalman_filter1);
+
     lastTimeUs = currentTimeUs;
 
 }
 
-float Get_Height_PID_Output(int n)
+float Get_Height_PID_Output(int n)  //Vx,Vy,Vz_Setpoint
 {
     switch(n){
         case 0:
@@ -247,13 +273,13 @@ float Get_Height_PID_Output(int n)
             return 0;
     }
 }
-float Get_Velocity_PID_Output(int n)
+float Get_Velocity_PID_Output(int n) //Roll,Pitch,throttle_Setpoint
 {
     switch(n){
     case 0:
-        return vel_x_controller.output;
+        return vel_x_controller.output/180*3.1415926;
     case 1:
-        return vel_y_controller.output;
+        return vel_y_controller.output/180*3.1415926;
     case 2:
         return vel_z_controller.output;
     default:
@@ -261,7 +287,7 @@ float Get_Velocity_PID_Output(int n)
     }
 }
 
-float Get_Velocity_throttle(int n)
+float Get_Velocity_throttle(int n)  //Roll,Pitch,throttle_Setpoint
 {
     switch(n){
     case 0:
@@ -273,10 +299,32 @@ float Get_Velocity_throttle(int n)
     default:
         return 0;
     }
-    // return vel_controller.throttle;
 }
 
-float Get_Height_PID_Error(void)
+float Get_Position_LpFiter(int n) //x,y,z_true
 {
-    return height_controller.pid.iError;
+    switch(n){
+    case 0:
+        return attitude_controller.r_x_lowpassfilter;
+    case 1:
+        return attitude_controller.r_y_lowpassfilter;
+    case 2:
+        return kalman_filter1.X_Hat_current->element[0];
+    default:
+        return 0;
+    }
+}
+
+float Get_Velocity_LpFiter(int n) //Vx,Vy,Vz_true
+{
+    switch(n){
+    case 0:
+        return attitude_controller.Error_x_filter;
+    case 1:
+        return attitude_controller.Error_y_filter;
+    case 2:
+        return kalman_filter1.X_Hat_current->element[1];
+    default:
+        return 0;
+    }
 }

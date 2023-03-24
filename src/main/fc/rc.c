@@ -47,7 +47,6 @@
 #include "flight/pid_init.h"
 #include "flight/wifi.h"
 #include "flight/alt_ctrl.h"
-#include "flight/position_ctrl.h"
 
 #include "io/beeper.h"
 
