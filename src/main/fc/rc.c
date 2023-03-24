@@ -619,24 +619,24 @@ FAST_CODE void processRcCommand(void)
                 //     // rcDeflection[axis] = 0;
                 //     // rcDeflectionAbs[axis] = 0;
                 // }
-#ifdef USE_POSITION_HOLD
-            if(FLIGHT_MODE(POSITION_HOLD_MODE))
-            {
-                for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
-                {
-                    OptiTrack[0] = Get_Velocity_throttle(1);
-                    OptiTrack[1] = Get_Velocity_throttle(0);
-                    OptiTrack[2] = 0;
-                    // OptiTrack[0] = 0.05;
-                    // OptiTrack[1] = 0.1;
-                }
-                // if(axis == FD_YAW)
-                // {
-                //     OptiTrack[2] = 0;
-                // }
+// #ifdef USE_POSITION_HOLD
+//             if(FLIGHT_MODE(POSITION_HOLD_MODE))
+//             {
+//                 for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
+//                 {
+//                     OptiTrack[0] = Get_Velocity_throttle(1);
+//                     OptiTrack[1] = Get_Velocity_throttle(0);
+//                     OptiTrack[2] = 0;
+//                     // OptiTrack[0] = 0.05;
+//                     // OptiTrack[1] = 0.1;
+//                 }
+//                 // if(axis == FD_YAW)
+//                 // {
+//                 //     OptiTrack[2] = 0;
+//                 // }
 
-            }
-#endif
+//             }
+// #endif
             
 
 

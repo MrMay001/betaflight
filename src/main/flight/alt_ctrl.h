@@ -43,6 +43,10 @@ typedef struct attitude_ctrl
     float r_y;
     float r_z;
 
+    float r_x_last;
+    float r_y_last;
+    float r_z_last;
+
     float r_x_lowpassfilter;
     float r_y_lowpassfilter;
 
@@ -56,6 +60,10 @@ typedef struct attitude_ctrl
     float Error_x_filter;
     float Error_y_filter;
     float Error_z_filter;
+
+    float Error_x_filter_last;
+    float Error_y_filter_last;
+    float Error_z_filter_last;
 
     float r_Roll;
     float r_Pitch;
@@ -105,6 +113,7 @@ extern controller_t attitude_yaw_controller;
 extern controller_t height_controller; 
 extern controller_t vel_controller; 
 
+void attitude_controller_init(attitude_ctrl_t * ctrl);
 void position_controller_init(controller_t * controller, int axis);
 void vel_controller_init(controller_t * controller, int axis);
 void Controller_Init(void);

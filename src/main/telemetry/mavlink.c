@@ -546,8 +546,9 @@ void mavlinkSendHUD(void) //ID 74
         scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
         // alt Current altitude (MSL), in meters, if we have sonar or baro use them, otherwise use GPS (less accurate)
         //attitude_controller.r_Yaw,
-        (float)attitude_controller.sum1, //yaw
-        Get_Velocity_LpFiter(2)
+        // attitude_controller.sum1,
+        Get_Velocity_LpFiter(2), //yaw
+        attitude_controller.Error_y
         );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
