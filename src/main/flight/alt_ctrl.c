@@ -159,8 +159,8 @@ void vel_controller_init(controller_t * controller, int axis)
     }
     if(axis == 2)
     {
-        controller->pid.P = 0.04;
-        controller->pid.I = 0.01;
+        controller->pid.P = 0.3;
+        controller->pid.I = 0;
         controller->pid.D = 0;
 
         controller->pid.Error1 = 0.0;
@@ -240,7 +240,7 @@ void Update_Lowpass_Filter(timeUs_t currentTimeUs)
     float dt = (currentTimeUs - lasttime) * 1e-6f;
     attitude_controller.filter_dt = dt;
     
-    Lowpass_Filter(&attitude_controller, 0.3, 0., 0);//lowpass_filter
+    Lowpass_Filter(&attitude_controller, 0.3, 0.3, 0);//lowpass_filter
  
 
     lasttime = currentTimeUs;
@@ -256,9 +256,10 @@ void adjust_position(kalman_filter_t *filter)
 
     // vel_x_controller.setpoint = outputx;
     // vel_y_controller.setpoint = outputy;
-    vel_x_controller.setpoint = outputx;
+    // vel_x_controller.setpoint = outputx;
+    vel_x_controller.setpoint = 1; 
     vel_y_controller.setpoint = outputy; 
-    vel_z_controller.setpoint = 1.0;
+    vel_z_controller.setpoint = outputz;
     adjust_velocity(&kalman_filter1); 
 }
 

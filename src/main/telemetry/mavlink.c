@@ -548,7 +548,8 @@ void mavlinkSendHUD(void) //ID 74
         //attitude_controller.r_Yaw,
         // attitude_controller.sum1,
         Get_Velocity_LpFiter(2), //yaw
-        attitude_controller.Error_y
+        // attitude_controller.Error_y
+        Get_Velocity_throttle(2)
         );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
