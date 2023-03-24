@@ -49,9 +49,11 @@ typedef struct attitude_ctrl
 
     float r_x_lowpassfilter;
     float r_y_lowpassfilter;
+    float r_z_lowpassfilter;
 
     float r_x_lowpassfilter_last;
     float r_y_lowpassfilter_last;
+    float r_z_lowpassfilter_last;
 
     float Error_x;
     float Error_y;
@@ -121,6 +123,8 @@ void Controller_Init(void);
 float pid_controller(float process_value, controller_t *controller, float I_limit);
 void adjust_position(kalman_filter_t *filter);
 void adjust_velocity(kalman_filter_t *filter);
+
+void Lowpass_Filter(attitude_ctrl_t * ctrl, float alphax, float alphay, int n);
 
 void Update_PID_Position(timeUs_t currentTimeUs);
 void Update_PID_Velocity(timeUs_t currentTimeUs);

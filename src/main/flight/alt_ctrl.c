@@ -42,6 +42,10 @@ void attitude_controller_init(attitude_ctrl_t * ctrl)
     ctrl->Error_y_filter = 0;
     ctrl->Error_y_filter_last = 0;
 
+    ctrl->Error_z = 0;
+    ctrl->Error_z_filter = 0;
+    ctrl->Error_z_filter_last = 0;
+
     ctrl->filter_dt = 0;
     ctrl->pidupdate_dt = 0;
     ctrl->pitch = 0;
@@ -58,6 +62,9 @@ void attitude_controller_init(attitude_ctrl_t * ctrl)
     ctrl->r_y_lowpassfilter_last = 0;
     ctrl->r_z = 0;
     ctrl->r_z_last = 0;
+    ctrl->r_z_lowpassfilter = 0;
+    ctrl->r_z_lowpassfilter_last = 0;
+
     ctrl->sum = 0;
     ctrl->sum1 = 0;
     ctrl->yaw = 0;
@@ -218,17 +225,27 @@ float pid_controller(float process_value, controller_t *controller, float I_limi
 void Lowpass_Filter(attitude_ctrl_t * ctrl, float alphax, float alphay, int n)  //filter
 {
     UNUSED(n);
+
+    ctrl->r_x_lowpassfilter = ctrl->r_x_lowpassfilter + alphax * (ctrl->r_x - ctrl->r_x_lowpassfilter);
+    ctrl->r_y_lowpassfilter = ctrl->r_y_lowpassfilter + alphay * (ctrl->r_y - ctrl->r_y_lowpassfilter);
+    ctrl->r_z_lowpassfilter = ctrl->r_z_lowpassfilter + alphay * (ctrl->r_z - ctrl->r_z_lowpassfilter);
+
+ //   ctrl->Error_y_filter = ctrl->Error_y_filter_last + alphay * (ctrl->Error_y - ctrl->Error_y_filter_last);
+
+
     //ctrl->r_x_filter = alphax * ctrl->r_x + (1 - alphax) * ctrl->r_x_filter
-    ctrl->Error_x = (ctrl->r_x - ctrl->r_x_last) / ctrl->filter_dt;
-    ctrl->Error_y = (ctrl->r_y - ctrl->r_y_last) / ctrl->filter_dt;
+    // ctrl->Error_x = (ctrl->r_x - ctrl->r_x_last) / ctrl->filter_dt;
+    // ctrl->Error_y = (ctrl->r_y - ctrl->r_y_last) / ctrl->filter_dt;
 
-    ctrl->Error_x_filter = ctrl->Error_x_filter_last + alphax * (ctrl->Error_x - ctrl->Error_x_filter_last);
-    ctrl->Error_y_filter = ctrl->Error_y_filter_last + alphay * (ctrl->Error_y - ctrl->Error_y_filter_last);
+    // ctrl->Error_x_filter = ctrl->Error_x_filter_last + alphax * (ctrl->Error_x - ctrl->Error_x_filter_last);
+    // ctrl->Error_y_filter = ctrl->Error_y_filter_last + alphay * (ctrl->Error_y - ctrl->Error_y_filter_last);
 
-    ctrl->Error_x_filter_last = ctrl->Error_x_filter;
-    ctrl->Error_y_filter_last = ctrl->Error_y_filter;
-    ctrl->r_x_last = ctrl->r_x;
-    ctrl->r_y_last = ctrl->r_y;
+    // ctrl->Error_x_filter_last = ctrl->Error_x_filter;
+    // ctrl->Error_y_filter_last = ctrl->Error_y_filter;
+    // ctrl->r_x_last = ctrl->r_x;
+    // ctrl->r_y_last = ctrl->r_y;
+
+
 
  //   ctrl->Error_z_filter = ctrl->Error_z_filter + alphay * (ctrl->Error_z - ctrl->Error_z_filter);
 }
@@ -239,9 +256,15 @@ void Update_Lowpass_Filter(timeUs_t currentTimeUs)
     static uint64_t lasttime = 0;
     float dt = (currentTimeUs - lasttime) * 1e-6f;
     attitude_controller.filter_dt = dt;
-    
-    Lowpass_Filter(&attitude_controller, 0.3, 0.3, 0);//lowpass_filter
- 
+    attitude_controller.r_x_lowpassfilter_last = attitude_controller.r_x_lowpassfilter;
+    attitude_controller.r_y_lowpassfilter_last = attitude_controller.r_y_lowpassfilter;
+    attitude_controller.r_z_lowpassfilter_last = attitude_controller.r_z_lowpassfilter;
+
+    Lowpass_Filter(&attitude_controller, 0.4, 0.4, 0);//lowpass_filter
+
+    attitude_controller.Error_x_filter = (attitude_controller.r_x_lowpassfilter - attitude_controller.r_x_lowpassfilter_last)/dt;
+    attitude_controller.Error_y_filter = (attitude_controller.r_y_lowpassfilter - attitude_controller.r_y_lowpassfilter_last)/dt;
+    attitude_controller.Error_z_filter = (attitude_controller.r_z_lowpassfilter - attitude_controller.r_z_lowpassfilter_last)/dt;
 
     lasttime = currentTimeUs;
 
@@ -250,14 +273,16 @@ void Update_Lowpass_Filter(timeUs_t currentTimeUs)
 //
 void adjust_position(kalman_filter_t *filter)
 {
-    float outputx = pid_controller(attitude_controller.r_x, &attitude_x_controller, 0.5);
-    float outputy = pid_controller(attitude_controller.r_y, &attitude_y_controller, 0.5);
-    float outputz = pid_controller(filter->X_Hat_current->element[0], &attitude_z_controller, 0.5);
+    UNUSED(filter);
+    float outputx = pid_controller(attitude_controller.r_x_lowpassfilter, &attitude_x_controller, 0.5);
+    float outputy = pid_controller(attitude_controller.r_y_lowpassfilter, &attitude_y_controller, 0.5);
+    float outputz = pid_controller(attitude_controller.r_z_lowpassfilter, &attitude_z_controller, 0.5);
+    //float outputz = pid_controller(filter->X_Hat_current->element[0], &attitude_z_controller, 0.5);
 
     // vel_x_controller.setpoint = outputx;
     // vel_y_controller.setpoint = outputy;
     // vel_x_controller.setpoint = outputx;
-    vel_x_controller.setpoint = 1; 
+    vel_x_controller.setpoint = outputx; 
     vel_y_controller.setpoint = outputy; 
     vel_z_controller.setpoint = outputz;
     adjust_velocity(&kalman_filter1); 
@@ -265,9 +290,12 @@ void adjust_position(kalman_filter_t *filter)
 
 void adjust_velocity(kalman_filter_t *filter)
 {
+    UNUSED(filter);
     float voutputx = pid_controller(attitude_controller.Error_x_filter, &vel_x_controller, 0.5);
     float voutputy = pid_controller(attitude_controller.Error_y_filter, &vel_y_controller, 0.5);
-    float voutputz = pid_controller(filter->X_Hat_current->element[1], &vel_z_controller, 0.1);
+    float voutputz = pid_controller(attitude_controller.Error_z_filter, &vel_z_controller, 0.5);
+
+    //float voutputz = pid_controller(filter->X_Hat_current->element[1], &vel_z_controller, 0.1);
     
     vel_x_controller.throttle = voutputx;
     vel_y_controller.throttle = voutputy;
