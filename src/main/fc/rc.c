@@ -612,6 +612,7 @@ FAST_CODE void processRcCommand(void)
                         {
                             OptiTrack[0] = attitude_controller.r_Roll;
                             OptiTrack[1] = attitude_controller.r_Pitch;
+                            // OptiTrack[0] = -5;
                             OptiTrack[2] = attitude_controller.r_Yaw;
 
                         }
@@ -623,9 +624,9 @@ FAST_CODE void processRcCommand(void)
                     case 128:{
                         for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
                         {
-                            OptiTrackRate[0] = get_offboard.roll_rate;
-                            OptiTrackRate[1] = get_offboard.pitch_rate;
-                            OptiTrackRate[2] = get_offboard.yaw_rate;
+                            OptiTrackRate[0] = get_offboard.roll_rate * 180 / M_PI;
+                            OptiTrackRate[1] = get_offboard.pitch_rate* 180 / M_PI;
+                            OptiTrackRate[2] = get_offboard.yaw_rate* 180 / M_PI;
                         }
                         mode_seclct.angle_mode = 0;
                         mode_seclct.angularrate_mode = 1;

@@ -200,7 +200,7 @@ void mode_select_init(selectmode_t * mode_seclct)
 
 void get_offboard_init(get_offboard_t * get_offboard)
 {
-    get_offboard->q[0] = 0;
+    get_offboard->q[0] = 1;
     get_offboard->q[1] = 0;
     get_offboard->q[2] = 0;
     get_offboard->q[3] = 0;
@@ -210,7 +210,7 @@ void get_offboard_init(get_offboard_t * get_offboard)
     get_offboard->yaw_rate = 0;
     get_offboard->thrust = 0;
 
-    get_offboard->type_mask = 0;
+    get_offboard->type_mask = 7;
 }
 
 void Controller_Init(void)
@@ -367,11 +367,29 @@ void Updata_Angle_or_Anglerate(timeUs_t currentTimeUs) //200Hz
 
 void EulerAngles(attitude_ctrl_t * ctrl, get_offboard_t * offboard)
 {
+    // ctrl->r_Pitch = -5;
+    // float sinr_cosp = 2 * (offboard->q[0] * offboard->q[1] + offboard->q[2] * offboard->q[3]);
+    // float cosr_cosp = 1 - 2 * (offboard->q[1] * offboard->q[1] + offboard->q[2] * offboard->q[2]);
+    // ctrl->r_Roll = atan2f(sinr_cosp, cosr_cosp) * 180 / M_PI;
+
+    // pitch (y-axis rotation)
+    // float sinp = sqrtf(1 + 2 * (offboard->q[0] * offboard->q[2] - offboard->q[1] * offboard->q[3]));
+    // float cosp = sqrtf(1 - 2 * (offboard->q[0] * offboard->q[2] - offboard->q[1] * offboard->q[3]));
+    // ctrl->r_Pitch = (2 * atan2f(sinp, cosp) - M_PI / 2) * 180 / M_PI;
+
+    // yaw (z-axis rotation)
+    // float siny_cosp = 2 * (offboard->q[0] * offboard->q[3] + offboard->q[1] * offboard->q[2]);
+    // float cosy_cosp = 1 - 2 * (offboard->q[2] * offboard->q[2] + offboard->q[3] * offboard->q[3]);
+    // ctrl->r_Yaw = atan2f(siny_cosp, cosy_cosp) * 180 / M_PI;
     ctrl->r_Roll = atan2f(2 * (offboard->q[0] * offboard->q[1] + offboard->q[2] * offboard->q[3]), \
                          1 - 2 * (offboard->q[1] * offboard->q[1] + offboard->q[2] * offboard->q[2]));
     ctrl->r_Pitch = asinf(2 * (offboard->q[0] * offboard->q[2] - offboard->q[1] * offboard->q[3]));
     ctrl->r_Yaw = atan2f(2 * (offboard->q[0] * offboard->q[3] + offboard->q[1] * offboard->q[2]), \
     1 - 2 * (offboard->q[3] * offboard->q[3] + offboard->q[2] * offboard->q[2]));
+    ctrl->r_Roll = - ctrl->r_Roll * 180 / M_PI;
+    ctrl->r_Pitch = - ctrl->r_Pitch * 180 / M_PI;
+    ctrl->r_Yaw = ctrl->r_Yaw * 180 / M_PI;
+    
 }
 
 float Get_Height_PID_Output(int n)  //Vx,Vy,Vz_Setpoint
