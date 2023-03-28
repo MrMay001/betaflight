@@ -16,6 +16,7 @@
 attitude_send_t attitude_send;
 attitude_ctrl_t attitude_controller;
 selectmode_t mode_seclct;
+get_offboard_t get_offboard;
 
 controller_t attitude_x_controller;
 controller_t attitude_y_controller;
@@ -49,9 +50,14 @@ void attitude_controller_init(attitude_ctrl_t * ctrl)
 
     ctrl->filter_dt = 0;
     ctrl->pidupdate_dt = 0;
-    ctrl->pitch = 0;
+
+    ctrl->roll_rate = 0;
+    ctrl->pitch_rate = 0;
+    ctrl->yaw_rate = 0;
     ctrl->r_Pitch = 0;
     ctrl->r_Roll = 0;
+    ctrl->r_Yaw = 0;
+
     ctrl->r_x = 0;
     ctrl->r_x_last = 0;
     ctrl->r_x_lowpassfilter = 0;
@@ -68,7 +74,7 @@ void attitude_controller_init(attitude_ctrl_t * ctrl)
 
     ctrl->sum = 0;
     ctrl->sum1 = 0;
-    ctrl->yaw = 0;
+    ctrl->r_Yaw_OptiTrack = 0;
 }
 void position_controller_init(controller_t * controller, int axis)
 {
@@ -192,8 +198,25 @@ void mode_select_init(selectmode_t * mode_seclct)
     mode_seclct->angularrate_mode = 0;
 }
 
+void get_offboard_init(get_offboard_t * get_offboard)
+{
+    get_offboard->q[0] = 0;
+    get_offboard->q[1] = 0;
+    get_offboard->q[2] = 0;
+    get_offboard->q[3] = 0;
+
+    get_offboard->roll_rate = 0;
+    get_offboard->pitch_rate = 0;
+    get_offboard->yaw_rate = 0;
+    get_offboard->thrust = 0;
+
+    get_offboard->type_mask = 0;
+}
+
 void Controller_Init(void)
 {
+    mode_select_init(&mode_seclct);
+    get_offboard_init(&get_offboard);
     attitude_controller_init(&attitude_controller);
     position_controller_init(&attitude_x_controller, 0);
     position_controller_init(&attitude_y_controller, 1);
@@ -320,19 +343,35 @@ void Update_PID_Position(timeUs_t currentTimeUs) //200Hz
     static timeUs_t lastTimeUs = 0;
     float dTime = (currentTimeUs - lastTimeUs)*1e-6f;
     attitude_controller.pidupdate_dt = dTime;
-    if(FLIGHT_MODE(POSITION_HOLD_MODE))
-    {
-        attitude_x_controller.setpoint = attitude_x_controller.setpoint_input;
-        attitude_y_controller.setpoint = attitude_y_controller.setpoint_input;
-    }
-    else{
-        attitude_x_controller.setpoint = 0;
-        attitude_y_controller.setpoint = 0;
-    }
+
+    // if(FLIGHT_MODE(POSITION_HOLD_MODE))
+    // {
+    //     attitude_x_controller.setpoint = attitude_x_controller.setpoint_input;
+    //     attitude_y_controller.setpoint = attitude_y_controller.setpoint_input;
+    // }
+    // else{
+    //     attitude_x_controller.setpoint = 0;
+    //     attitude_y_controller.setpoint = 0;
+    // }
     adjust_position(&kalman_filter1);
 
     lastTimeUs = currentTimeUs;
 
+}
+
+void Updata_Angle_or_Anglerate(timeUs_t currentTimeUs) //200Hz
+{
+    UNUSED(currentTimeUs);
+    EulerAngles(&attitude_controller, &get_offboard);  //quart_to_rpy
+}
+
+void EulerAngles(attitude_ctrl_t * ctrl, get_offboard_t * offboard)
+{
+    ctrl->r_Roll = atan2f(2 * (offboard->q[0] * offboard->q[1] + offboard->q[2] * offboard->q[3]), \
+                         1 - 2 * (offboard->q[1] * offboard->q[1] + offboard->q[2] * offboard->q[2]));
+    ctrl->r_Pitch = asinf(2 * (offboard->q[0] * offboard->q[2] - offboard->q[1] * offboard->q[3]));
+    ctrl->r_Yaw = atan2f(2 * (offboard->q[0] * offboard->q[3] + offboard->q[1] * offboard->q[2]), \
+    1 - 2 * (offboard->q[3] * offboard->q[3] + offboard->q[2] * offboard->q[2]));
 }
 
 float Get_Height_PID_Output(int n)  //Vx,Vy,Vz_Setpoint
@@ -404,4 +443,9 @@ float Get_Velocity_LpFiter(int n) //Vx,Vy,Vz_true
     default:
         return 0;
     }
+}
+
+float Get_offboard_thrust(void)
+{
+    return get_offboard.thrust;
 }

@@ -1038,7 +1038,8 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         {
             if(axis == FD_YAW)
             {
-                float errorAngle = OptiTrackCtrlAngle(2) - attitude_controller.r_Yaw;//OptiTrack Yaw data
+                // float errorAngle = OptiTrackCtrlAngle(2) - attitude_controller.r_Yaw;//OptiTrack Yaw data
+                float errorAngle = OptiTrackCtrlAngle(2) - attitude_controller.r_Yaw_OptiTrack;
                 // angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);  //limit Yaw deg
                 attitude_controller.error_angle = errorAngle;
                 currentPidSetpoint = errorAngle * -1.0f;  //kp=-1.0

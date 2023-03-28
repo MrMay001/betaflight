@@ -129,10 +129,6 @@ static uint8_t mavBuffer[MAVLINK_MAX_PACKET_LEN];
 static uint32_t mavlinkstate_position = 0;
 //static uint8_t wifi_uart_baud = 1;
 
-static bool state1 = 0;
-static bool state = 0;
-static bool state2 = 0;
-
 //串口接收触发函数
 static void mavlinkReceive(uint16_t c, void* data) {
 
@@ -181,12 +177,32 @@ static void mavlinkReceive(uint16_t c, void* data) {
             //     break;
             // }
 
+            case 82:{
+                mavlink_set_attitude_target_t command;
+                mavlink_msg_set_attitude_target_decode(&msg,&command);
+                get_offboard.q[0] = command.q[0];  //w
+                get_offboard.q[1] = command.q[1];  //x
+                get_offboard.q[2] = command.q[2];  //y
+                get_offboard.q[3] = command.q[3];  //z
+                get_offboard.roll_rate = command.body_roll_rate;
+                get_offboard.pitch_rate = command.body_pitch_rate;
+                get_offboard.yaw_rate = command.body_yaw_rate;
+                get_offboard.thrust = command.thrust;
+                get_offboard.type_mask = command.type_mask;
+                attitude_controller.sum++;
+                if(attitude_controller.sum == 180)
+                {
+                    attitude_controller.sum = 0;
+                }
+                break;
+            }
+
             case 84: {
                 mavlink_set_position_target_local_ned_t command;
                 mavlink_msg_set_position_target_local_ned_decode(&msg,&command);
                 attitude_y_controller.setpoint_input = command.afx;
                 attitude_x_controller.setpoint_input = command.afy;
-                attitude_controller.r_Yaw = command.afz;
+                attitude_controller.r_Yaw_OptiTrack = command.afz;
                 attitude_controller.sum1++;
                 if(attitude_controller.sum1 == 180)
                 {
@@ -199,16 +215,13 @@ static void mavlinkReceive(uint16_t c, void* data) {
             case 102:{
                 mavlink_vision_position_estimate_t command;
                 mavlink_msg_vision_position_estimate_decode(&msg,&command);
-                //attitude_controller.Error_x = (command.x - attitude_controller.r_y)/attitude_controller.usec;
-                //attitude_controller.Error_y = (command.y - attitude_controller.r_x)/attitude_controller.usec;
-                //attitude_controller.Error_z = (-command.z - attitude_controller.r_z)/attitude_controller.usec;
                 attitude_controller.r_y = command.x;
                 attitude_controller.r_x = command.y;
                 attitude_controller.r_z = -command.z;
-                attitude_controller.sum++;
-                if(attitude_controller.sum == 180)
+                attitude_controller.sum2++;
+                if(attitude_controller.sum2 == 180)
                 {
-                    attitude_controller.sum = 0;
+                    attitude_controller.sum2 = 0;
                 }
                 // attitude_controller.r_Roll = command.roll;
                 // attitude_controller.r_Pitch = command.pitch;
@@ -272,15 +285,15 @@ static void mavlinkSerialWrite(uint8_t * buf, uint16_t length)
         serialWrite(mavlinkPort, buf[i]);
 }
 
-static int16_t headingOrScaledMilliAmpereHoursDrawn(void)
-{
-    if (isAmperageConfigured() && telemetryConfig()->mavlink_mah_as_heading_divisor > 0) {
-        // In the Connex Prosight OSD, this goes between 0 and 999, so it will need to be scaled in that range.
-        return getMAhDrawn() / telemetryConfig()->mavlink_mah_as_heading_divisor;
-    }
-    // heading Current heading in degrees, in compass units (0..360, 0=north)
-    return DECIDEGREES_TO_DEGREES(attitude.values.yaw);
-}
+// static int16_t headingOrScaledMilliAmpereHoursDrawn(void)
+// {
+//     if (isAmperageConfigured() && telemetryConfig()->mavlink_mah_as_heading_divisor > 0) {
+//         // In the Connex Prosight OSD, this goes between 0 and 999, so it will need to be scaled in that range.
+//         return getMAhDrawn() / telemetryConfig()->mavlink_mah_as_heading_divisor;
+//     }
+//     // heading Current heading in degrees, in compass units (0..360, 0=north)
+//     return DECIDEGREES_TO_DEGREES(attitude.values.yaw);
+// }
 
 
 void freeMAVLinkTelemetryPort(void)
@@ -477,7 +490,7 @@ void mavlinksendAltitude(void) //ID 141
     // mavVel_Measure = Get_Acc_bias_kalman(); //速度测量值  (airspeed)
     // mavVel_Hat_current = Get_Vel_Kalman(); //速度最优估计值 (groundspeed)
     // // mavAltitude_Measure = rangefinderGetLatestAltitude(); //高度测量值 (altitude)
-    // mavAltitude_Measure = Get_z_measure();
+    // mavAltitude_Measure = Get_z_measure();/home/nesc/single_ws/src/quarotor_fee
     // mavAltitude_Hat_current = Get_Alt_Kalman(); //高度最优估计值 (climb)
     // mavPID_height_output = Get_Height_PID_Output(); //获取外环pid结果
     // mavPID_vel_output = Get_Velocity_PID_Output(); //获取内环pid结果
@@ -530,8 +543,10 @@ void mavlinkSendHUD(void) //ID 74
         // airspeed Current airspeed in m/s
         // Get_Velocity_throttle(0),  //roll
         // Get_Velocity_throttle(1),  //pitch
-        Get_Velocity_LpFiter(0),
-        Get_Velocity_LpFiter(1),
+        // Get_Velocity_LpFiter(0),
+        // Get_Velocity_LpFiter(1),
+        get_offboard.yaw_rate,
+        attitude_controller.r_Roll,
         // attitude_controller.r_x_lowpassfilter,
         // attitude_controller.r_y_lowpassfilter,
         // attitude_controller.r_z, //yaw
@@ -546,10 +561,11 @@ void mavlinkSendHUD(void) //ID 74
         scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
         // alt Current altitude (MSL), in meters, if we have sonar or baro use them, otherwise use GPS (less accurate)
         //attitude_controller.r_Yaw,
-        // attitude_controller.sum1,
-        Get_Velocity_LpFiter(2), //yaw
+        attitude_controller.r_Pitch,
+        //Get_Velocity_LpFiter(2), //yaw
         // attitude_controller.Error_y
-        Get_Velocity_throttle(2)
+        //Get_Velocity_throttle(2)
+        attitude_controller.r_Yaw
         );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);
@@ -593,7 +609,7 @@ void mavlinkLocalPositionNedCov(void)  //ID 64
         -Get_Velocity_LpFiter(2),
         attitude_controller.error_angle,
         attitude_controller.error_angle_output,
-        attitude_controller.r_Yaw,
+        attitude_controller.r_Yaw_OptiTrack,
         0
     );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);

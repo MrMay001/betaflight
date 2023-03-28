@@ -70,10 +70,11 @@ typedef struct attitude_ctrl
     float r_Roll;
     float r_Pitch;
     float r_Yaw;
+    float r_Yaw_OptiTrack;
 
-    float roll;  //rad/s
-    float pitch;  //rad/s
-    float yaw;   //rad/s    
+    float roll_rate;  //rad/s
+    float pitch_rate;  //rad/s
+    float yaw_rate;   //rad/s    
 
     float error_angle;    
     float error_angle_output;                                                                                              
@@ -108,10 +109,21 @@ typedef struct selectmode
     uint8_t angularrate_mode;
 }selectmode_t;
 
+typedef struct get_offboard
+{
+    float q[4];  //w,x,y,z
+    float roll_rate;
+    float pitch_rate;
+    float yaw_rate;
+    float thrust;
+    uint8_t type_mask; //mode
+}get_offboard_t;
+
 
 extern attitude_send_t attitude_send;
 extern attitude_ctrl_t attitude_controller;
 extern selectmode_t mode_seclct;
+extern get_offboard_t get_offboard;
 
 extern controller_t attitude_x_controller;
 extern controller_t attitude_y_controller;
@@ -127,6 +139,7 @@ void attitude_controller_init(attitude_ctrl_t * ctrl);
 void position_controller_init(controller_t * controller, int axis);
 void vel_controller_init(controller_t * controller, int axis);
 void mode_select_init(selectmode_t * mode_seclct);
+void get_offboard_init(get_offboard_t * get_offboard);
 void Controller_Init(void);
 
 float pid_controller(float process_value, controller_t *controller, float I_limit);
@@ -138,9 +151,12 @@ void Lowpass_Filter(attitude_ctrl_t * ctrl, float alphax, float alphay, int n);
 void Update_PID_Position(timeUs_t currentTimeUs);
 void Update_PID_Velocity(timeUs_t currentTimeUs);
 void Update_Lowpass_Filter(timeUs_t currentTimeUs);
+void Updata_Angle_or_Anglerate(timeUs_t currentTimeUs);
+void EulerAngles(attitude_ctrl_t * ctrl, get_offboard_t * offboard);
 
 float Get_Height_PID_Output(int n);
 float Get_Velocity_PID_Output(int n);
 float Get_Velocity_throttle(int n);
 float Get_Position_LpFiter(int n);
 float Get_Velocity_LpFiter(int n);
+float Get_offboard_thrust(void);

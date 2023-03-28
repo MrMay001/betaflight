@@ -181,6 +181,7 @@ typedef enum {
 #ifdef USE_ALT_HOLD
     TASK_KALMAN_FILTER,
     TASK_ALT_CTRL,
+    TASK_ANGLE_CTRL,
 #endif
 
 #ifdef USE_POSITION_HOLD

@@ -52,7 +52,4 @@ bool getRxRateValid(void);
 float getOptiTrackDeflection(int axis);
 float getOptiTrackDeflectionAbs(int axis);
 float getOptiTrackRate(int axis);
-
-extern float OptiTrack[3], OptiTrackAbs[3];
-extern float OptiTrackRate[3];
 #endif

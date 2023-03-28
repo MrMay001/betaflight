@@ -624,7 +624,13 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
 #ifdef USE_ALT_HOLD
     if(FLIGHT_MODE(RANGEFINDER_MODE))
     {
-        throttle = Get_Velocity_throttle(2);
+        if(FLIGHT_MODE(POSITION_HOLD_MODE))
+        {
+            throttle = Get_offboard_thrust();
+        }
+        else{
+            throttle = Get_Velocity_throttle(2);
+        }
     }
 #endif
 
