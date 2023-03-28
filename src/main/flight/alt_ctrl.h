@@ -102,8 +102,16 @@ typedef struct attitude_send
     float test_yaw;
 }attitude_send_t;
 
+typedef struct selectmode
+{
+    uint8_t angle_mode;
+    uint8_t angularrate_mode;
+}selectmode_t;
+
+
 extern attitude_send_t attitude_send;
 extern attitude_ctrl_t attitude_controller;
+extern selectmode_t mode_seclct;
 
 extern controller_t attitude_x_controller;
 extern controller_t attitude_y_controller;
@@ -118,6 +126,7 @@ extern controller_t vel_controller;
 void attitude_controller_init(attitude_ctrl_t * ctrl);
 void position_controller_init(controller_t * controller, int axis);
 void vel_controller_init(controller_t * controller, int axis);
+void mode_select_init(selectmode_t * mode_seclct);
 void Controller_Init(void);
 
 float pid_controller(float process_value, controller_t *controller, float I_limit);

@@ -70,8 +70,8 @@ float rcCommandDelta[XYZ_AXIS_COUNT];
 static float rawSetpoint[XYZ_AXIS_COUNT];
 static float setpointRate[3], rcDeflection[3], rcDeflectionAbs[3];
 #ifdef USE_POSITION_HOLD
-static float OptiTrack[3], OptiTrackAbs[3];
-static float OptiTrackRate[3];
+float OptiTrack[3], OptiTrackAbs[3];
+float OptiTrackRate[3];
 #endif
 static bool reverseMotors = false;
 static applyRatesFn *applyRates;

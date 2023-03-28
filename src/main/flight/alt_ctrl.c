@@ -15,6 +15,7 @@
 
 attitude_send_t attitude_send;
 attitude_ctrl_t attitude_controller;
+selectmode_t mode_seclct;
 
 controller_t attitude_x_controller;
 controller_t attitude_y_controller;
@@ -26,7 +27,7 @@ controller_t attitude_yaw_controller;
 controller_t vel_controller; 
 controller_t height_controller; 
 
-static float throttle_init = 0.3;
+static float throttle_init = 0.18;
 float height_error_range = 0.02;
 float vel_error_range = 0.01;
 
@@ -107,8 +108,8 @@ void position_controller_init(controller_t * controller, int axis)
     }
     if(axis == 2)
     {
-        controller->pid.P = 1;
-        controller->pid.I = 0.0;
+        controller->pid.P = 1.2;
+        controller->pid.I = 0;
         controller->pid.D = 0;
 
         controller->pid.Error1 = 0.0;
@@ -166,7 +167,7 @@ void vel_controller_init(controller_t * controller, int axis)
     }
     if(axis == 2)
     {
-        controller->pid.P = 0.3;
+        controller->pid.P = 0.15;
         controller->pid.I = 0;
         controller->pid.D = 0;
 
@@ -185,6 +186,11 @@ void vel_controller_init(controller_t * controller, int axis)
     }
 }
 
+void mode_select_init(selectmode_t * mode_seclct)
+{
+    mode_seclct->angle_mode = 0;
+    mode_seclct->angularrate_mode = 0;
+}
 
 void Controller_Init(void)
 {
@@ -378,7 +384,8 @@ float Get_Position_LpFiter(int n) //x,y,z_true
     case 1:
         return attitude_controller.r_y_lowpassfilter;
     case 2:
-        return kalman_filter1.X_Hat_current->element[0];
+        // return kalman_filter1.X_Hat_current->element[0];
+        return attitude_controller.r_z_lowpassfilter;
     default:
         return 0;
     }
@@ -392,7 +399,8 @@ float Get_Velocity_LpFiter(int n) //Vx,Vy,Vz_true
     case 1:
         return attitude_controller.Error_y_filter;
     case 2:
-        return kalman_filter1.X_Hat_current->element[1];
+        // return kalman_filter1.X_Hat_current->element[1];
+        return attitude_controller.Error_z_filter;
     default:
         return 0;
     }
