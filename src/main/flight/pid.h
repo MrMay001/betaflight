@@ -460,3 +460,5 @@ float pidGetFeedforwardSmoothFactor();
 float pidGetFeedforwardJitterFactor();
 float pidGetFeedforwardTransitionFactor();
 float dynLpfCutoffFreq(float throttle, uint16_t dynLpfMin, uint16_t dynLpfMax, uint8_t expo);
+
+float OptiTrackCtrlAngle(uint8_t axis);

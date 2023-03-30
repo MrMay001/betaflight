@@ -314,7 +314,7 @@ static float getLevelModeRcDeflection(uint8_t axis)
 }
 
 //OptiTrackCtrlAngle
-static float OptiTrackCtrlAngle(uint8_t axis)
+float OptiTrackCtrlAngle(uint8_t axis)
 {
     const float TrajectorySettingBias = getOptiTrackDeflection(axis);
     // if(axis < FD_YAW)
@@ -1042,7 +1042,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
                 float errorAngle = OptiTrackCtrlAngle(2) - attitude_controller.r_Yaw_OptiTrack;
                 // angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);  //limit Yaw deg
                 attitude_controller.error_angle = errorAngle;
-                currentPidSetpoint = errorAngle * -1.0f;  //kp=-1.0
+                currentPidSetpoint = errorAngle * -6.0f;  //kp=-1.0
                 attitude_controller.error_angle_output = currentPidSetpoint;
             }
         }

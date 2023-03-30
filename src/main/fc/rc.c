@@ -633,7 +633,7 @@ FAST_CODE void processRcCommand(void)
                         break;
                     }
                 default:
-                        OptiTrack[2] = 0;
+                        // OptiTrack[2] = 0;
                         mode_seclct.angle_mode = 0;
                         mode_seclct.angularrate_mode = 0;
                     break;

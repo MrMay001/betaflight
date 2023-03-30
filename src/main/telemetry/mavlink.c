@@ -545,8 +545,8 @@ void mavlinkSendHUD(void) //ID 74
         // Get_Velocity_throttle(1),  //pitch
         // Get_Velocity_LpFiter(0),
         // Get_Velocity_LpFiter(1),
-        get_offboard.yaw_rate,
-        attitude_controller.r_Roll,
+        attitude_controller.r_Yaw_OptiTrack,
+        OptiTrackCtrlAngle(2),
         // attitude_controller.r_x_lowpassfilter,
         // attitude_controller.r_y_lowpassfilter,
         // attitude_controller.r_z, //yaw
