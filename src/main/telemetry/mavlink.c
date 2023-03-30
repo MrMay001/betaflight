@@ -185,15 +185,15 @@ static void mavlinkReceive(uint16_t c, void* data) {
                 get_offboard.q[2] = command.q[2];  //y
                 get_offboard.q[3] = command.q[3];  //z
                 get_offboard.roll_rate = command.body_roll_rate;
-                get_offboard.pitch_rate = command.body_pitch_rate;
+                get_offboard.pitch_rate = - command.body_pitch_rate;
                 get_offboard.yaw_rate = command.body_yaw_rate;
                 get_offboard.thrust = command.thrust;
                 get_offboard.type_mask = command.type_mask;
-                attitude_controller.sum++;
-                if(attitude_controller.sum == 180)
-                {
-                    attitude_controller.sum = 0;
-                }
+                // attitude_controller.sum++;
+                // if(attitude_controller.sum == 180)
+                // {
+                //     attitude_controller.sum = 0;
+                // }
                 break;
             }
 
@@ -203,11 +203,11 @@ static void mavlinkReceive(uint16_t c, void* data) {
                 attitude_y_controller.setpoint_input = command.afx;
                 attitude_x_controller.setpoint_input = command.afy;
                 attitude_controller.r_Yaw_OptiTrack = command.afz;
-                attitude_controller.sum1++;
-                if(attitude_controller.sum1 == 180)
-                {
-                    attitude_controller.sum1 = 0;
-                }
+                // attitude_controller.sum1++;
+                // if(attitude_controller.sum1 == 180)
+                // {
+                //     attitude_controller.sum1 = 0;
+                // }
                 // ledSet(1, state1); 
                 // state1 = !state1;
                 break;
@@ -555,7 +555,7 @@ void mavlinkSendHUD(void) //ID 74
         // groundspeed Current ground speed in m/s
         //attitude_controller.r_Pitch,
         // heading Current heading in degrees, in compass units (0..360, 0=north)
-        attitude_controller.sum,
+        attitude_controller.sum2,
         //headingOrScaledMilliAmpereHoursDrawn(),
         // throttle Current throttle setting in integer percent, 0 to 100
         scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),

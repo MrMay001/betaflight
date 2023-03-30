@@ -633,13 +633,17 @@ FAST_CODE void processRcCommand(void)
                         break;
                     }
                 default:
+                        OptiTrack[2] = 0;
+                        mode_seclct.angle_mode = 0;
+                        mode_seclct.angularrate_mode = 0;
                     break;
                 }
             }
-            else{
-                mode_seclct.angle_mode = 0;
-                mode_seclct.angularrate_mode = 0;
-            }
+            // else{
+            //     OptiTrack[2] = 0;
+            //     mode_seclct.angle_mode = 0;
+            //     mode_seclct.angularrate_mode = 0;
+            // }
 #endif
 
                 angleRate = applyRates(axis, rcCommandf, rcCommandfAbs);

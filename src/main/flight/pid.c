@@ -1052,7 +1052,6 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         // -----calculate error rate
         const float gyroRate = gyro.gyroADCf[axis];      // Process variable from gyro output in deg/sec
         float errorRate = currentPidSetpoint - gyroRate; // r - y
-
 //add position_hold
 #ifdef USE_POSITION_HOLD   //set rate  deg/s
         if(FLIGHT_MODE(POSITION_HOLD_MODE) && (mode_seclct.angle_mode == 0) && (mode_seclct.angularrate_mode == 1))

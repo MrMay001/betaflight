@@ -386,7 +386,7 @@ void EulerAngles(attitude_ctrl_t * ctrl, get_offboard_t * offboard)
     ctrl->r_Pitch = asinf(2 * (offboard->q[0] * offboard->q[2] - offboard->q[1] * offboard->q[3]));
     ctrl->r_Yaw = atan2f(2 * (offboard->q[0] * offboard->q[3] + offboard->q[1] * offboard->q[2]), \
     1 - 2 * (offboard->q[3] * offboard->q[3] + offboard->q[2] * offboard->q[2]));
-    ctrl->r_Roll = - ctrl->r_Roll * 180 / M_PI;
+    ctrl->r_Roll = ctrl->r_Roll * 180 / M_PI;
     ctrl->r_Pitch = - ctrl->r_Pitch * 180 / M_PI;
     ctrl->r_Yaw = ctrl->r_Yaw * 180 / M_PI;
     
