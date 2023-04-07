@@ -606,49 +606,49 @@ FAST_CODE void processRcCommand(void)
                 const float rcCommandfAbs = fabsf(rcCommandf);
                 rcDeflectionAbs[axis] = rcCommandfAbs;
 
-#ifdef USE_POSITION_HOLD
-            if(FLIGHT_MODE(POSITION_HOLD_MODE))
-            {
-                switch(get_offboard.type_mask)
-                {
-                    case 7:{
-                        for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
-                        {
-                            OptiTrack[0] = attitude_controller.r_Roll;
-                            OptiTrack[1] = attitude_controller.r_Pitch;
-                            // OptiTrack[0] = -5;
-                            OptiTrack[2] = attitude_controller.r_Yaw;
+// #ifdef USE_POSITION_HOLD
+//             if(FLIGHT_MODE(POSITION_HOLD_MODE))
+//             {
+//                 switch(get_offboard.type_mask)
+//                 {
+//                     case 7:{
+//                         for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
+//                         {
+//                             OptiTrack[0] = attitude_controller.r_Roll;
+//                             OptiTrack[1] = attitude_controller.r_Pitch;
+//                             // OptiTrack[0] = -5;
+//                             OptiTrack[2] = attitude_controller.r_Yaw;
 
-                        }
-                        mode_seclct.angle_mode = 1;
-                        mode_seclct.angularrate_mode = 0;
-                        break;
-                    }
+//                         }
+//                         mode_seclct.angle_mode = 1;
+//                         mode_seclct.angularrate_mode = 0;
+//                         break;
+//                     }
 
-                    case 128:{
-                        for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
-                        {
-                            OptiTrackRate[0] = get_offboard.roll_rate * 180 / M_PI;
-                            OptiTrackRate[1] = get_offboard.pitch_rate * 180 / M_PI;
-                            OptiTrackRate[2] = get_offboard.yaw_rate * 180 / M_PI;
-                        }
-                        mode_seclct.angle_mode = 0;
-                        mode_seclct.angularrate_mode = 1;
-                        break;
-                    }
-                default:
-                        // OptiTrack[2] = 0;
-                        mode_seclct.angle_mode = 0;
-                        mode_seclct.angularrate_mode = 0;
-                    break;
-                }
-            }
-            // else{
-            //     OptiTrack[2] = 0;
-            //     mode_seclct.angle_mode = 0;
-            //     mode_seclct.angularrate_mode = 0;
-            // }
-#endif
+//                     case 128:{
+//                         for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
+//                         {
+//                             OptiTrackRate[0] = get_offboard.roll_rate * 180 / M_PI;
+//                             OptiTrackRate[1] = get_offboard.pitch_rate * 180 / M_PI;
+//                             OptiTrackRate[2] = get_offboard.yaw_rate * 180 / M_PI;
+//                         }
+//                         mode_seclct.angle_mode = 0;
+//                         mode_seclct.angularrate_mode = 1;
+//                         break;
+//                     }
+//                 default:
+//                         // OptiTrack[2] = 0;
+//                         mode_seclct.angle_mode = 0;
+//                         mode_seclct.angularrate_mode = 0;
+//                     break;
+//                 }
+//             }
+//             // else{
+//             //     OptiTrack[2] = 0;
+//             //     mode_seclct.angle_mode = 0;
+//             //     mode_seclct.angularrate_mode = 0;
+//             // }
+// #endif
 
                 angleRate = applyRates(axis, rcCommandf, rcCommandfAbs);
             }
@@ -677,7 +677,51 @@ FAST_CODE void processRcCommand(void)
 //     }
 // #endif
 
+#ifdef USE_POSITION_HOLD
+            if(FLIGHT_MODE(POSITION_HOLD_MODE))
+            {
+                for (int axis = FD_ROLL; axis <= FD_YAW; axis++) {
+                    switch(get_offboard.type_mask)
+                    {
+                        case 7:{
+                            for(int axis = FD_ROLL; axis <= FD_YAW; axis++)
+                            {
+                                OptiTrack[0] = attitude_controller.r_Roll;
+                                OptiTrack[1] = attitude_controller.r_Pitch;
+                                // OptiTrack[0] = -5;
+                                OptiTrack[2] = attitude_controller.r_Yaw;
 
+                            }
+                            mode_seclct.angle_mode = 1;
+                            mode_seclct.angularrate_mode = 0;
+                            break;
+                        }
+
+                        case 128:{
+                            for(int axis = FD_ROLL; axis <= FD_YAW; axis++)
+                            {
+                                OptiTrackRate[0] = get_offboard.roll_rate * 180 / M_PI;
+                                OptiTrackRate[1] = get_offboard.pitch_rate * 180 / M_PI;
+                                OptiTrackRate[2] = get_offboard.yaw_rate * 180 / M_PI;
+                            }
+                            mode_seclct.angle_mode = 0;
+                            mode_seclct.angularrate_mode = 1;
+                            break;
+                        }
+                    default:
+                            // OptiTrack[2] = 0;
+                            mode_seclct.angle_mode = 0;
+                            mode_seclct.angularrate_mode = 0;
+                        break;
+                }
+            }
+        }
+            // else{
+            //     OptiTrack[2] = 0;
+            //     mode_seclct.angle_mode = 0;
+            //     mode_seclct.angularrate_mode = 0;
+            // }
+#endif
 
 #ifdef USE_RC_SMOOTHING_FILTER
     processRcSmoothingFilter();
