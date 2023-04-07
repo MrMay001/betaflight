@@ -420,7 +420,7 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
 #endif
     float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
 
-    if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE))
+    if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE) || FLIGHT_MODE(POSITION_HOLD_MODE))
     {
         // ANGLE mode - control is angle based
         const float setpointCorrection = errorAngle * pidRuntime.levelGain;
@@ -433,6 +433,13 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
         const float setpointCorrection = errorAngle * pidRuntime.horizonGain * horizonLevelStrength;
         currentPidSetpoint += pt3FilterApply(&pidRuntime.attitudeFilter[axis], setpointCorrection);
     }
+
+    // if (FLIGHT_MODE(POSITION_HOLD_MODE))
+    // {
+    //     setpointCorrection = errorAngle * pidRuntime.levelGain;
+    //     currentPidSetpoint = pt3FilterApply(&pidRuntime.attitudeFilter[axis], setpointCorrection);
+
+    // }
     // }
 
     return currentPidSetpoint;
@@ -990,52 +997,67 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
     // ----------PID controller----------
     for (int axis = FD_ROLL; axis <= FD_YAW; ++axis)
     {
-
-        // float currentPidSetpoint = getSetpointRate(axis);
-        float currentPidSetpoint = getOptiTrackRate(axis);
-
-        if(axis == FD_ROLL)
+        float currentPidSetpoint = 0;
+        if(FLIGHT_MODE(POSITION_HOLD_MODE))
         {
-            attitude_controller.test_anglerate_setpoint[0] = currentPidSetpoint;
-        }else if(axis == FD_PITCH)
-        {
-            attitude_controller.test_anglerate_setpoint[1] = currentPidSetpoint;
+            currentPidSetpoint = getOptiTrackRate(axis);
+            if(axis == FD_ROLL)
+            {
+                attitude_controller.test_anglerate_setpoint[0] = currentPidSetpoint;
+            }else if(axis == FD_PITCH)
+            {
+                attitude_controller.test_anglerate_setpoint[1] = currentPidSetpoint;
+            }else
+            {
+                attitude_controller.test_anglerate_setpoint[2] = currentPidSetpoint;
+            }
+            if (pidRuntime.maxVelocity[axis])
+            {
+                currentPidSetpoint = accelerationLimit(axis, currentPidSetpoint);
+            }
+
+#if defined(USE_ACC)
+            if ((mode_seclct.angle_mode == 1) && (mode_seclct.angularrate_mode == 0))
+            {
+
+                currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
+                DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
+            }
+            // //new add yaw pid
+#endif
+
+
         }else
         {
-            attitude_controller.test_anglerate_setpoint[2] = currentPidSetpoint;
-        }
+            currentPidSetpoint = getSetpointRate(axis);
 
-#ifdef USE_POSITION_HOLD   //set rate  deg/s
-        if(FLIGHT_MODE(POSITION_HOLD_MODE) && (mode_seclct.angle_mode == 0) && (mode_seclct.angularrate_mode == 1))
-        {
-            attitude_controller.flight_mode = 1;
-            // if(axis == 1)
-            // {
-            //     // errorRate = getOptiTrackRate(axis) - gyroRate;
-            //     errorRate = 30.0 - gyroRate;
-            // }else{
-            // currentPidSetpoint = getOptiTrackRate(axis);
-            // }
-        }
-        else{
-            attitude_controller.flight_mode = 0;
-        }
-#endif
-        if (pidRuntime.maxVelocity[axis])
-        {
-            currentPidSetpoint = accelerationLimit(axis, currentPidSetpoint);
-        }
+            if(axis == FD_ROLL)
+            {
+                attitude_controller.test_anglerate_setpoint[0] = currentPidSetpoint;
+            }else if(axis == FD_PITCH)
+            {
+                attitude_controller.test_anglerate_setpoint[1] = currentPidSetpoint;
+            }else
+            {
+                attitude_controller.test_anglerate_setpoint[2] = currentPidSetpoint;
+            }
+
+            if (pidRuntime.maxVelocity[axis])
+            {
+                currentPidSetpoint = accelerationLimit(axis, currentPidSetpoint);
+            }
         // Yaw control is GYRO based, direct sticks control is applied to rate PID
         // When Race Mode is active PITCH control is also GYRO based in level or horizon mode
 #if defined(USE_ACC)
-        if ((levelMode == LEVEL_MODE_R && axis == FD_ROLL) || (levelMode == LEVEL_MODE_RP && (axis == FD_ROLL || axis == FD_PITCH)))
-        {
+            if ((levelMode == LEVEL_MODE_R && axis == FD_ROLL) || (levelMode == LEVEL_MODE_RP && (axis == FD_ROLL || axis == FD_PITCH)))
+            {
 
-            currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
-            DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
-        }
+                currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
+                DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
+            }
         // //new add yaw pid
 #endif
+        }
 
 
 #ifdef USE_ACRO_TRAINER
@@ -1065,7 +1087,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         }
 #endif // USE_YAW_SPIN_RECOVERY
  #ifdef USE_POSITION_HOLD
-        if(FLIGHT_MODE(POSITION_HOLD_MODE) && (mode_seclct.angle_mode == 1) && (mode_seclct.angularrate_mode == 0))
+        if(FLIGHT_MODE(POSITION_HOLD_MODE))
         {
             if(axis == FD_YAW)
             {

@@ -556,7 +556,7 @@ void mavlinkSendHUD(void) //ID 74
         // groundspeed Current ground speed in m/s
         //attitude_controller.r_Pitch,
         // heading Current heading in degrees, in compass units (0..360, 0=north)
-        attitude_controller.flight_mode,
+        attitude_controller.sum2,
         //headingOrScaledMilliAmpereHoursDrawn(),
         // throttle Current throttle setting in integer percent, 0 to 100
         scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
