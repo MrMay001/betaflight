@@ -112,7 +112,11 @@ bool getShouldUpdateFeedforward(void)
 {
     const bool updateFf = newRxDataForFF;
     if (newRxDataForFF == true){
+        state_check.rc_receive = 1;
         newRxDataForFF = false;
+    }
+    else{
+        state_check.rc_receive = 0;
     }
     return updateFf;
 }
@@ -625,8 +629,8 @@ FAST_CODE void processRcCommand(void)
                         for(int axis = FD_ROLL; axis <= FD_PITCH; axis++)
                         {
                             OptiTrackRate[0] = get_offboard.roll_rate * 180 / M_PI;
-                            OptiTrackRate[1] = get_offboard.pitch_rate* 180 / M_PI;
-                            OptiTrackRate[2] = get_offboard.yaw_rate* 180 / M_PI;
+                            OptiTrackRate[1] = get_offboard.pitch_rate * 180 / M_PI;
+                            OptiTrackRate[2] = get_offboard.yaw_rate * 180 / M_PI;
                         }
                         mode_seclct.angle_mode = 0;
                         mode_seclct.angularrate_mode = 1;

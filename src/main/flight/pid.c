@@ -991,7 +991,36 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
     for (int axis = FD_ROLL; axis <= FD_YAW; ++axis)
     {
 
-        float currentPidSetpoint = getSetpointRate(axis);
+        // float currentPidSetpoint = getSetpointRate(axis);
+        float currentPidSetpoint = getOptiTrackRate(axis);
+
+        if(axis == FD_ROLL)
+        {
+            attitude_controller.test_anglerate_setpoint[0] = currentPidSetpoint;
+        }else if(axis == FD_PITCH)
+        {
+            attitude_controller.test_anglerate_setpoint[1] = currentPidSetpoint;
+        }else
+        {
+            attitude_controller.test_anglerate_setpoint[2] = currentPidSetpoint;
+        }
+
+#ifdef USE_POSITION_HOLD   //set rate  deg/s
+        if(FLIGHT_MODE(POSITION_HOLD_MODE) && (mode_seclct.angle_mode == 0) && (mode_seclct.angularrate_mode == 1))
+        {
+            attitude_controller.flight_mode = 1;
+            // if(axis == 1)
+            // {
+            //     // errorRate = getOptiTrackRate(axis) - gyroRate;
+            //     errorRate = 30.0 - gyroRate;
+            // }else{
+            // currentPidSetpoint = getOptiTrackRate(axis);
+            // }
+        }
+        else{
+            attitude_controller.flight_mode = 0;
+        }
+#endif
         if (pidRuntime.maxVelocity[axis])
         {
             currentPidSetpoint = accelerationLimit(axis, currentPidSetpoint);
@@ -1001,11 +1030,13 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
 #if defined(USE_ACC)
         if ((levelMode == LEVEL_MODE_R && axis == FD_ROLL) || (levelMode == LEVEL_MODE_RP && (axis == FD_ROLL || axis == FD_PITCH)))
         {
+
             currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
             DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
         }
         // //new add yaw pid
 #endif
+
 
 #ifdef USE_ACRO_TRAINER
         if ((axis != FD_YAW) && pidRuntime.acroTrainerActive && !pidRuntime.inCrashRecoveryMode && !launchControlActive)
@@ -1048,17 +1079,24 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         }
 #endif
 
-
         // -----calculate error rate
         const float gyroRate = gyro.gyroADCf[axis];      // Process variable from gyro output in deg/sec
         float errorRate = currentPidSetpoint - gyroRate; // r - y
 //add position_hold
-#ifdef USE_POSITION_HOLD   //set rate  deg/s
-        if(FLIGHT_MODE(POSITION_HOLD_MODE) && (mode_seclct.angle_mode == 0) && (mode_seclct.angularrate_mode == 1))
-        {
-            errorRate = getOptiTrackRate(axis) - gyroRate;
-        }
-#endif
+// #ifdef USE_POSITION_HOLD   //set rate  deg/s
+//         if(FLIGHT_MODE(POSITION_HOLD_MODE) && (mode_seclct.angle_mode == 0) && (mode_seclct.angularrate_mode == 1))
+//         {
+//             // if(axis == 1)
+//             // {
+//             //     // errorRate = getOptiTrackRate(axis) - gyroRate;
+//             //     errorRate = 30.0 - gyroRate;
+//             // }else{
+//                 errorRate = getOptiTrackRate(axis) - gyroRate;
+//             // }
+//         }
+// #endif
+
+        attitude_controller.error_angle_rate[axis] = errorRate;
 
 #if defined(USE_ACC)
         handleCrashRecovery(

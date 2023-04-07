@@ -52,6 +52,7 @@
 #include "config/config.h"
 #include "fc/rc_controls.h"
 #include "fc/runtime_config.h"
+#include "fc/rc.h"
 
 #include "flight/mixer.h"
 #include "flight/pid.h"
@@ -189,11 +190,11 @@ static void mavlinkReceive(uint16_t c, void* data) {
                 get_offboard.yaw_rate = command.body_yaw_rate;
                 get_offboard.thrust = command.thrust;
                 get_offboard.type_mask = command.type_mask;
-                // attitude_controller.sum++;
-                // if(attitude_controller.sum == 180)
-                // {
-                //     attitude_controller.sum = 0;
-                // }
+                attitude_controller.sum++;
+                if(attitude_controller.sum == 100)
+                {
+                    attitude_controller.sum = 0;
+                }
                 break;
             }
 
@@ -545,8 +546,8 @@ void mavlinkSendHUD(void) //ID 74
         // Get_Velocity_throttle(1),  //pitch
         // Get_Velocity_LpFiter(0),
         // Get_Velocity_LpFiter(1),
-        attitude_controller.r_Yaw_OptiTrack,
-        OptiTrackCtrlAngle(2),
+        state_check.rc_receive,
+        state_check.feedforward_apply,
         // attitude_controller.r_x_lowpassfilter,
         // attitude_controller.r_y_lowpassfilter,
         // attitude_controller.r_z, //yaw
@@ -555,17 +556,17 @@ void mavlinkSendHUD(void) //ID 74
         // groundspeed Current ground speed in m/s
         //attitude_controller.r_Pitch,
         // heading Current heading in degrees, in compass units (0..360, 0=north)
-        attitude_controller.sum2,
+        attitude_controller.flight_mode,
         //headingOrScaledMilliAmpereHoursDrawn(),
         // throttle Current throttle setting in integer percent, 0 to 100
         scaleRange(constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX), PWM_RANGE_MIN, PWM_RANGE_MAX, 0, 100),
         // alt Current altitude (MSL), in meters, if we have sonar or baro use them, otherwise use GPS (less accurate)
         //attitude_controller.r_Yaw,
-        attitude_controller.r_Pitch,
+        attitude_controller.test_anglerate_setpoint[0],
         //Get_Velocity_LpFiter(2), //yaw
         // attitude_controller.Error_y
         //Get_Velocity_throttle(2)
-        attitude_controller.r_Yaw
+        attitude_controller.test_anglerate_setpoint[1]
         );
     msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavMsg);
     mavlinkSerialWrite(mavBuffer, msgLength);

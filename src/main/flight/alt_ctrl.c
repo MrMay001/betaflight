@@ -28,9 +28,17 @@ controller_t attitude_yaw_controller;
 controller_t vel_controller; 
 controller_t height_controller; 
 
+state_check_t state_check;
+
 static float throttle_init = 0.18;
 float height_error_range = 0.02;
 float vel_error_range = 0.01;
+
+void state_check_init(state_check_t * state)
+{
+    state->rc_receive = 0.0;
+    state->feedforward_apply = 0.0;
+}
 
 void attitude_controller_init(attitude_ctrl_t * ctrl)
 {
@@ -75,6 +83,15 @@ void attitude_controller_init(attitude_ctrl_t * ctrl)
     ctrl->sum = 0;
     ctrl->sum1 = 0;
     ctrl->r_Yaw_OptiTrack = 0;
+
+    ctrl->error_angle_rate[0] = 0;
+    ctrl->error_angle_rate[1] = 0;
+    ctrl->error_angle_rate[2] = 0;
+
+    ctrl->test_anglerate_setpoint[0] = 0;
+    ctrl->test_anglerate_setpoint[1] = 0;
+    ctrl->test_anglerate_setpoint[2] = 0; 
+    ctrl->flight_mode = 0;
 }
 void position_controller_init(controller_t * controller, int axis)
 {
@@ -210,11 +227,12 @@ void get_offboard_init(get_offboard_t * get_offboard)
     get_offboard->yaw_rate = 0;
     get_offboard->thrust = 0;
 
-    get_offboard->type_mask = 7;
+    get_offboard->type_mask = 0;
 }
 
 void Controller_Init(void)
 {
+    state_check_init(&state_check);
     mode_select_init(&mode_seclct);
     get_offboard_init(&get_offboard);
     attitude_controller_init(&attitude_controller);

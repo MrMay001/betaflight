@@ -81,6 +81,9 @@ typedef struct attitude_ctrl
 
     float altitude_thrust;  //0-1
 
+    float error_angle_rate[3];
+    float test_anglerate_setpoint[3];
+
     uint16_t sum;
     uint16_t sum1;
     uint16_t sum2;
@@ -88,6 +91,7 @@ typedef struct attitude_ctrl
     float usec;
     float pidupdate_dt;
     float filter_dt;
+    int16_t flight_mode;
 }attitude_ctrl_t;
 
 typedef struct attitude_send
@@ -119,7 +123,13 @@ typedef struct get_offboard
     uint8_t type_mask; //mode
 }get_offboard_t;
 
+typedef struct state_check
+{
+    float rc_receive;
+    float feedforward_apply;
+}state_check_t;
 
+extern state_check_t state_check;
 extern attitude_send_t attitude_send;
 extern attitude_ctrl_t attitude_controller;
 extern selectmode_t mode_seclct;
@@ -135,6 +145,7 @@ extern controller_t attitude_yaw_controller;
 extern controller_t height_controller; 
 extern controller_t vel_controller; 
 
+void state_check_init(state_check_t * state);
 void attitude_controller_init(attitude_ctrl_t * ctrl);
 void position_controller_init(controller_t * controller, int axis);
 void vel_controller_init(controller_t * controller, int axis);
