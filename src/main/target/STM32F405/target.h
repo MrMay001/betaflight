@@ -85,20 +85,20 @@
 #define BARO_I2C_INSTANCE       (I2CDEV_1)
 #endif
 
-#define USE_BARO
-#define USE_BARO_BMP280
-#define USE_BARO_MS5611
-#define USE_BARO_BMP085
+// #define USE_BARO
+// #define USE_BARO_BMP280
+// #define USE_BARO_MS5611
+// #define USE_BARO_BMP085
 
 #define USE_SPI_DEVICE_3
 #define SPI3_SCK_PIN            PB3
 #define SPI3_MISO_PIN           PB4
 #define SPI3_MOSI_PIN           PB5
 
-#define USE_FLASHFS
-#define USE_FLASH_M25P16
-#define FLASH_CS_PIN            PC0
-#define FLASH_SPI_INSTANCE      SPI3
+// #define USE_FLASHFS
+// #define USE_FLASH_M25P16
+// #define FLASH_CS_PIN            PC0
+// #define FLASH_SPI_INSTANCE      SPI3
 
 // *************** SD Card **************************
 //#define USE_BLACKBOX
@@ -110,14 +110,14 @@
 // #define SPI3_TX_DMA_OPT                     1     // DMA 1 Stream 7 Channel 0
 
 // *************** OSD *****************************
-#define USE_SPI_DEVICE_2
-#define SPI2_SCK_PIN            PB13
-#define SPI2_MISO_PIN           PB14
-#define SPI2_MOSI_PIN           PB15
+// #define USE_SPI_DEVICE_2
+// #define SPI2_SCK_PIN            PB13
+// #define SPI2_MISO_PIN           PB14
+// #define SPI2_MOSI_PIN           PB15
 
-#define USE_MAX7456
-#define MAX7456_SPI_INSTANCE    SPI2
-#define MAX7456_SPI_CS_PIN      PB10
+// #define USE_MAX7456
+// #define MAX7456_SPI_INSTANCE    SPI2
+// #define MAX7456_SPI_CS_PIN      PB10
 
 // *************** UART *****************************
 #define USE_VCP
