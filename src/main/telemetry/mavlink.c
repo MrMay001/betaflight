@@ -88,7 +88,7 @@
 #pragma GCC diagnostic pop
 
 #define TELEMETRY_MAVLINK_INITIAL_PORT_MODE MODE_RXTX
-#define TELEMETRY_MAVLINK_MAXRATE 100
+#define TELEMETRY_MAVLINK_MAXRATE 200
 #define TELEMETRY_MAVLINK_DELAY ((100 * 10) / TELEMETRY_MAVLINK_MAXRATE) //1000/100us=0.01ms
 
 #define WIFI_AT         "AT\r\n"
@@ -115,9 +115,9 @@ static portSharing_e mavlinkPortSharing;
 /* MAVLink datastream rates in Hz */
 static const uint8_t mavRates[] = {
     [MAV_DATA_STREAM_EXTENDED_STATUS] = 2, //2Hz
-    [MAV_DATA_STREAM_RC_CHANNELS] = 60, //5Hz
+    [MAV_DATA_STREAM_RC_CHANNELS] = 40, //5Hz
     [MAV_DATA_STREAM_POSITION] = 1, //100Hz
-    [MAV_DATA_STREAM_EXTRA1] = 60, //10Hz
+    [MAV_DATA_STREAM_EXTRA1] = 40, //10Hz
     [MAV_DATA_STREAM_EXTRA2] = 100, //100Hz
     [MAV_DATA_STREAM_EXTRA3] = 5
 };
