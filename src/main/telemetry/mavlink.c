@@ -99,7 +99,7 @@
 #define WIFI_CIPMUX     "AT+CIPMUX=0\r\n"
 // #define WIFI_CIPSTART   "AT+CIPSTART=\"UDP\",\"192.168.31.142\",14555,9000,0\r\n"
 // #define WIFI_CIPSTART   "AT+CIPSTART=\"UDP\",\"192.168.50.24\",14555,9000,0\r\n"
-#define WIFI_CIPSTART   "AT+CIPSTART=\"UDP\",\"192.168.50.109\",14556,9001,0\r\n"
+#define WIFI_CIPSTART   "AT+CIPSTART=\"UDP\",\"192.168.50.109\",14555,9001,0\r\n"
 #define WIFI_CIPMODE    "AT+CIPMODE=1\r\n"
 #define WIFI_CIPSEND    "AT+CIPSEND\r\n"
 
@@ -115,9 +115,9 @@ static portSharing_e mavlinkPortSharing;
 /* MAVLink datastream rates in Hz */
 static const uint8_t mavRates[] = {
     [MAV_DATA_STREAM_EXTENDED_STATUS] = 2, //2Hz
-    [MAV_DATA_STREAM_RC_CHANNELS] = 5, //5Hz
+    [MAV_DATA_STREAM_RC_CHANNELS] = 60, //5Hz
     [MAV_DATA_STREAM_POSITION] = 1, //100Hz
-    [MAV_DATA_STREAM_EXTRA1] = 30, //10Hz
+    [MAV_DATA_STREAM_EXTRA1] = 60, //10Hz
     [MAV_DATA_STREAM_EXTRA2] = 100, //100Hz
     [MAV_DATA_STREAM_EXTRA3] = 5
 };
@@ -671,9 +671,12 @@ void processMAVLinkTelemetry(void)
    
     // mavlinkSendHUD();
     }
+    if(mavlinkStreamTrigger(MAV_DATA_STREAM_RC_CHANNELS)) {
+        mavlinkSendHUD();
+        mavlinksendAltitude();
+    // mavlinkSendHUD();
+    }
     mavlinkSendAttitude();
-    mavlinksendAltitude();
-    mavlinkSendHUD();
     mavlinkLocalPositionNedCov();
     // mavlinkLocalPositionNedSystemGlobalOffset();
     // mavlinkLocalPositionNed();
