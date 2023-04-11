@@ -674,11 +674,10 @@ void processMAVLinkTelemetry(void)
    
     // mavlinkSendHUD();
     }
-    if(mavlinkStreamTrigger(MAV_DATA_STREAM_RC_CHANNELS)) {
-        mavlinkSendHUD();
-        mavlinksendAltitude();
+    
+    mavlinkSendHUD();
+    mavlinksendAltitude();
     // mavlinkSendHUD();
-    }
     mavlinkSendAttitude();
     mavlinkLocalPositionNedCov();
     // mavlinkLocalPositionNedSystemGlobalOffset();
