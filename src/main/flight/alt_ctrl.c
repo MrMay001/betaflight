@@ -82,6 +82,7 @@ void attitude_controller_init(attitude_ctrl_t * ctrl)
 
     ctrl->sum = 0;
     ctrl->sum1 = 0;
+    ctrl->sum2 = 0;
     ctrl->r_Yaw_OptiTrack = 0;
 
     ctrl->error_angle_rate[0] = 0;
