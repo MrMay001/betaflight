@@ -88,7 +88,7 @@
 #pragma GCC diagnostic pop
 
 #define TELEMETRY_MAVLINK_INITIAL_PORT_MODE MODE_RXTX
-#define TELEMETRY_MAVLINK_MAXRATE 200
+#define TELEMETRY_MAVLINK_MAXRATE 100
 #define TELEMETRY_MAVLINK_DELAY ((100 * 10) / TELEMETRY_MAVLINK_MAXRATE) //1000/100us=0.01ms
 
 #define WIFI_AT         "AT\r\n"
@@ -675,9 +675,9 @@ void processMAVLinkTelemetry(void)
     // mavlinkSendHUD();
     }
 
-    mavlinkSendHUD();
+    //mavlinkSendHUD();
     mavlinksendAltitude();
-    // mavlinkSendHUD();
+    mavlinkSendHUD();
     mavlinkSendAttitude();
     mavlinkLocalPositionNedCov();
     // mavlinkLocalPositionNedSystemGlobalOffset();
