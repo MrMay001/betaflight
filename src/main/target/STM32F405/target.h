@@ -85,10 +85,10 @@
 #define BARO_I2C_INSTANCE       (I2CDEV_1)
 #endif
 
-// #define USE_BARO
-// #define USE_BARO_BMP280
-// #define USE_BARO_MS5611
-// #define USE_BARO_BMP085
+#define USE_BARO
+#define USE_BARO_BMP280
+#define USE_BARO_MS5611
+#define USE_BARO_BMP085
 
 #define USE_SPI_DEVICE_3
 #define SPI3_SCK_PIN            PB3
