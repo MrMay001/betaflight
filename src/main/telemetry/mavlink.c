@@ -191,7 +191,7 @@ static void mavlinkReceive(uint16_t c, void* data) {
                 get_offboard.yaw_rate = command.body_yaw_rate;
                 get_offboard.thrust = command.thrust;
                 get_offboard.type_mask = command.type_mask;
-                attitude_controller.sum = 1;
+                // attitude_controller.sum = 1;
                 // if(attitude_controller.sum == 100)
                 // {
                 //     attitude_controller.sum = 0;
@@ -232,7 +232,7 @@ static void mavlinkReceive(uint16_t c, void* data) {
                 // attitude_controller.sum++;
                 kalman_filter1.Z_current->element[0] = -command.z;
                 kalman_filter1.optitrack_update = 1;
-                attitude_controller.sum = 0;
+                // attitude_controller.sum = 0;
                 // mavlinkSendHUD();
                 // if(state1 == 1)
                 // {
@@ -254,7 +254,7 @@ static void mavlinkReceive(uint16_t c, void* data) {
             //     break;
             // }
             default:
-                attitude_controller.sum = 0;
+                // attitude_controller.sum = 0;
                 break;
         }
     }
@@ -674,7 +674,7 @@ void processMAVLinkTelemetry(void)
    
     // mavlinkSendHUD();
     }
-    
+
     mavlinkSendHUD();
     mavlinksendAltitude();
     // mavlinkSendHUD();
